@@ -36,8 +36,11 @@ public:
     void init()
     {
         n_ = new ros::NodeHandle("~");
-        n_->param("origin_latitude",  origin_lati, 24.4795753);
-        n_->param("origin_longitude",  origin_longi, 54.609865);
+        n_->param("origin_latitude",  origin_lati, 24.644142);
+        n_->param("origin_longitude",  origin_longi, 54.755947);
+       //arena 3
+        // n_->param("origin_latitude",  origin_lati, 24.4795753);
+        //n_->param("origin_longitude",  origin_longi, 54.609865);
         n_->param("drone_number",  drone_num, 1.0);  //1 for m100,
         gps_sub_ = n_->subscribe<dji_sdk::GlobalPosition>("/dji_sdk/global_position", 1 ,&Multidrone::GpsCallback,this);
 
@@ -50,8 +53,11 @@ public:
         share_odom_pub_ = n_->advertise<nav_msgs::Odometry>(topic,1);
 
         {
-            double lati = 24.4796285 * PI/180;
-            double longi = 54.610338* PI/180;
+
+            //double lati = 24.4796285 * PI/180;
+            //double longi = 54.610338* PI/180;
+            double lati = 24.643860 * PI/180;
+            double longi = 54.756338 * PI/180;
             /* From GPS to Ground */
             double dlati = lati-origin_lati;
             double dlongti= longi-origin_longi;

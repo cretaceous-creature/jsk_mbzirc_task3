@@ -5,14 +5,14 @@
   <arg name="vision" default="true"/>
   <arg name="gimbal" default="true"/>
   <arg name="multidrone" default="true"/>
-  <arg name="motion" default="false"/>
+  <arg name="motion" default="true"/>
   <arg name="LOCAL_IP" default="192.168.97.31"/> <!-- UAV -->
   <arg name="REMOTE_IP" default="192.168.97.188"/> <!-- Remote PC -->
    <!-- lati and longi for the box -->
   <arg name="origin_latitude" default="24.495753"/>
   <arg name="origin_longitude" default="54.609865"/>
   <!-- drone number -->
-  <arg name="drone_number" default="1.0"/>
+  <arg name="drone_number" default="3.0"/>
   <arg name="image_topic" default="/image_zenmus"/>
   <arg name="cam_info_topic" default="/dji_sdk/camera_info"/>
   <arg name="raw_image" default="/image_zenmus"/>
@@ -47,10 +47,10 @@
         <node pkg="jsk_task3_m100" type="multidrone" name="multidrone">
       <rosparam subst_value="true">
         drone_number: $(arg drone_number)
-        origin_latitude: 24.643910
-        origin_longitude: 54.756077
+        origin_latitude: 24.644142
+        origin_longitude: 54.755947
     <!--origin_latitude: 24.4795753
-        origin_longitude: 54.609865 -->
+        origin_longitude: 54.609865  arena 3 -->
       </rosparam>
     </node>
   </group>
@@ -58,8 +58,10 @@
   <group if="$(arg motion)">
        <!-- uav_treasure_pick -->
        <node pkg="jsk_task3_m100" type="uav_treasure_pick" name="uav_treasure_pick">
-        landing_x: 5.9222
-        landing_y: 47.921
+<!--        landing_x: 5.9222
+        landing_y: 47.921  arena 3 -->
+        landing_x: -31.3921
+        landing_y: 39.5614
         drone_number: $(arg drone_number)
     </node>
        <!-- uav_treasure_move -->

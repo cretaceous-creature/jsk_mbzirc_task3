@@ -103,11 +103,14 @@ private:
 
     double drone_num;
 
+    int obtaincontrol_counter = 0;
+    int takeoff_counter = 0;
+
 public:
     void init()
     {
         //DJI SDK
-//        DJI_M100 = new DJIDrone(nh_);
+        DJI_M100 = new DJIDrone(nh_);
        //subscriber
         object_pose_sub_ = nh_.subscribe("/obj_cluster/centroid_pose",
                                          1,&treasure_pick::ObjPoseCallback,this);
@@ -125,8 +128,8 @@ public:
 
         double landing_x, landing_y;
         n_ = new ros::NodeHandle("~");
-        n_->param("landing_x",  landing_x, -28.0);
-        n_->param("landing_y",  landing_y, 40.0);
+        n_->param("landing_x",  landing_x, -31.3921);
+        n_->param("landing_y",  landing_y, 39.5614);
 
         MakeSearchPoints(landing_x, landing_y);
 
@@ -348,6 +351,22 @@ public:
        {
            holdup_height = 0.55;
        }
+
+       //obtain control and take off counter
+
+      obtaincontrol_counter++;
+      if(obtaincontrol_counter > 500) //10 seconds...
+      {
+          obtaincontrol_counter = 0;
+          DJI_M100->request_sdk_permission_control();
+      }
+
+      takeoff_counter++;
+      if(takeoff_counter>600) //12 seconds
+      {
+          takeoff_counter = 0;
+          DJI_M100->takeoff();
+      }
 
    }
     /***********
