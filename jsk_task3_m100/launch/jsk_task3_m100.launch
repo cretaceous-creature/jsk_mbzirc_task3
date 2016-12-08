@@ -1,0 +1,34 @@
+<!-- -*- mode: xml -*- -->
+<launch>
+  <arg name="paused" default="false"/>
+  <arg name="debug" default="false"/>
+
+
+ <!-- DJI SDK -->
+  <include file="$(find dji_sdk)/launch/sdk_manifold.launch" >
+    <arg name="paused" default="$(arg paused)"/>
+    <arg name="debug" default="$(arg debug)"/>
+  </include>
+
+ <!-- TASK3 -->
+  <group>
+  <!-- launch the hsi_filter -->
+  <include file="$(find jsk_pcl_ros)/launch/hsi_color_filter.launch" >
+    <arg name="INPUT" default="/camera/imagetoground"/>
+    <arg name="DEFAULT_NAMESPACE" default="/camera"/>
+    <arg name="h_max" default="$(arg h_max)"/>
+    <arg name="h_min" default="$(arg h_min)"/>
+    <arg name="s_max" default="$(arg s_max)"/>
+    <arg name="s_min" default="$(arg s_min)"/>
+    <arg name="i_max" default="$(arg i_max)"/>
+    <arg name="i_min" default="$(arg i_min)"/>
+  </include>
+    <node pkg="jsk_task3_m100" type="uav_teleop_joy" name="uav_teleop_joy"
+          launch-prefix="xterm -e">
+  	<param name="teleopUGV" value="$(arg teleopUGV)"/>
+	<remap from="teleopUGV" to="uav_teleop_keyboard/teleopUGV"/>
+    </node>
+  </group>
+
+</launch>
+

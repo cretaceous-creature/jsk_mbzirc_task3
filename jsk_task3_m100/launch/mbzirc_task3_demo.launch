@@ -1,0 +1,84 @@
+<!-- -*- mode: xml -*- -->
+<launch>
+  <arg name="paused" default="false"/>
+  <arg name="debug" default="false"/>
+  <arg name="gui" default="true" />
+  <arg name="headless" default="false"/>
+  <arg name="teleopUGV" default="false"/>
+  <arg name="use_ground_truth" default="true" />
+  <arg name="h_max" default="90" />
+  <arg name="h_min" default="-128" />
+  <arg name="s_max" default="154" />
+  <arg name="s_min" default="101" />
+  <arg name="i_max" default="196" />
+  <arg name="i_min" default="80" />
+
+  <include file="$(find jsk_mbzirc_common)/launch/mbzirc_arena_3.launch" >
+    <arg name="paused" default="$(arg paused)"/>
+    <arg name="debug" default="$(arg debug)"/>
+    <arg name="gui" value="$(arg gui)" />
+    <arg name="headless" default="$(arg headless)"/>
+  </include>
+
+  <arg name="cheat" default="false" />
+
+  <arg unless="$(arg cheat)" name="x" value="65"/>  
+  <arg     if="$(arg cheat)" name="x" value="0"/>
+  <arg unless="$(arg cheat)" name="y" value="-25"/>
+  <arg     if="$(arg cheat)" name="y" value="0"/>
+  <arg unless="$(arg cheat)" name="z" value="1"/>
+  <arg     if="$(arg cheat)" name="z" value="1"/>
+
+
+
+  <group if="$(arg cheat)" >
+    <node pkg="jsk_mbzirc_tasks" type="task_1_cheat.py" name="task_1_cheat" />
+  </group>
+
+  <!-- Spawn simulated quadrotor uav -->
+  <include file="$(find hector_quadrotor_gazebo)/launch/spawn_quadrotor.launch" >
+    <arg name="name" value="uav"/> 
+    <arg name="model" value="$(find jsk_mbzirc_tasks)/urdf/hawk.urdf.xacro"/> 
+    <arg unless="$(arg cheat)" name="use_ground_truth_for_tf" value="$(arg use_ground_truth)" />
+    <arg if="$(arg cheat)" name="use_ground_truth_for_tf" value="true" />
+    <arg unless="$(arg cheat)" name="use_ground_truth_for_control" value="$(arg use_ground_truth)" />
+    <arg if="$(arg cheat)" name="use_ground_truth_for_control" value="true" />
+    <arg name="x" value="$(arg x)"/>
+    <arg name="y" value="$(arg y)"/>
+    <arg name="z" value="$(arg z)"/>
+  </include>
+
+
+
+  <group unless="$(arg headless)" >
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find jsk_mbzirc_tasks)/config/task1.rviz"/>
+
+    <node pkg="jsk_mbzirc_tasks" type="uav_img2pointcloud" name="uav_img2pointcloud" />
+    <!-- <node pkg="jsk_mbzirc_tasks" type="uav_teleop_keyboard" name="uav_teleop_keyboard" -->
+    <!--       launch-prefix="xterm -e"> -->
+    <!-- 	<param name="teleopUGV" value="$(arg teleopUGV)"/> -->
+    <!-- 	<remap from="teleopUGV" to="uav_teleop_keyboard/teleopUGV"/> -->
+    <!-- </node> -->
+  </group>
+
+
+  <group>
+  <!-- launch the hsi_filter -->
+  <include file="$(find jsk_pcl_ros)/launch/hsi_color_filter.launch" >
+    <arg name="INPUT" default="/camera/imagetoground"/>
+    <arg name="DEFAULT_NAMESPACE" default="/camera"/>
+    <arg name="h_max" default="$(arg h_max)"/>
+    <arg name="h_min" default="$(arg h_min)"/>
+    <arg name="s_max" default="$(arg s_max)"/>
+    <arg name="s_min" default="$(arg s_min)"/>
+    <arg name="i_max" default="$(arg i_max)"/>
+    <arg name="i_min" default="$(arg i_min)"/>
+  </include>
+
+  <!-- launch the track and pick node -->
+    <node pkg="jsk_mbzirc_tasks" type="uav_treasure_move" name="uav_treasure_move" />
+    <node pkg="jsk_mbzirc_tasks" type="uav_treasure_pick" name="uav_treasure_pick" />
+  </group>
+
+</launch>
+

@@ -1,0 +1,24 @@
+<package>
+  <name>jsk_mbzirc_task3</name>
+  <version>1.0.0</version>
+  <description>
+      Software of JSK lab in mbzirc challenge.
+  </description>
+
+  <maintainer email="xychen@jsk.imi.i.u-tokyo.ac.jp">Xiangyu Chen</maintainer>
+  <maintainer email="anzai@jsk.imi.i.u-tokyo.ac.jp">Tomoki Anzai</maintainer>
+
+  <license>BSD</license>
+
+  <url type="website">http://www.jsk.t.u-tokyo.ac.jp/</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!--   jsk_mbzirc_common-->
+  <run_depend>jsk_mbzirc_board</run_depend>
+  <run_depend>jsk_task3_m100</run_depend>
+
+  <export>
+    <metapackage/>
+  </export>
+</package>

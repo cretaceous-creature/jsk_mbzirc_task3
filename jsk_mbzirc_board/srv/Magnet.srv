@@ -1,0 +1,6 @@
+#request, bool on: turn on of turn off the magnets, float time: on off time ms
+uint16 on
+uint16 time_ms
+---
+#response, roger
+uint16 status
