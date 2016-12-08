@@ -2,12 +2,15 @@
 
 ##controller
 Obtain control of M100:  R2 + L2 + Cross
+
 Release control of M100: R2 + L2 + Circle
 
 Release the magnets:  Circle + Triangle
 
 Take Off:   L1 + R1 + Cross
+
 Landing:    L1 + R1 + Circle
+
 Gohome:   L1 + R1 +  Square
 
 Gimbal:   L2 + L and R axis stick
@@ -23,15 +26,19 @@ Other:  TBC.
 ##PC setup
 ###Remote PC
 three terminals.
+
 `
 sixad -s
 `
+
 `
 rosrun joy joy_node 
 `
+
 `
 roslaunch jsk_task3_m100 remotepc.launch
 `
+
 for the last one, please open it and set the ip address correctly
 
 ###M100 PC
