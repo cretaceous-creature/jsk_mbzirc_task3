@@ -66,7 +66,7 @@ class TeleopUAVJoy
 private:
     //data
     double walk_vel, run_vel, yaw_rate, yaw_rate_run, vertical_vel;
-    u_int32_t v_rc[16],v_rc_checker;  //virtual RC
+    u_int32_t v_rc[16],v_rc_checker, stampsec, stampcounter;  //virtual RC
     geometry_msgs::Twist cmd;
     jsk_mbzirc_board::Magnet mag_status_;
     //subscriber and service
@@ -87,6 +87,8 @@ public:
         //data init
         cmd.linear.x = cmd.linear.y = cmd.angular.z = 0;
         mag_status_.request.time_ms = 500;  //500ms
+        stampcounter =0;
+	v_rc_checker = 0;
         v_rc[0] = 1024; // roll    +- 660
         v_rc[1] = 1024; // pitch
         v_rc[2] = 1024; // throttle
@@ -94,7 +96,7 @@ public:
         v_rc[4] = 1324; // gear
         v_rc[6] = 496;  // mode {1552(P), 1024(A), 496(F)}
         //sub and srv
-        joy_sub_ = n_.subscribe<sensor_msgs::Joy>("/joy",10,&TeleopUAVJoy::JoyCallback,this);
+        joy_sub_ = n_.subscribe<sensor_msgs::Joy>("/from_fc/joy",10,&TeleopUAVJoy::JoyCallback,this);
         mag_srv_ = n_.serviceClient<jsk_mbzirc_board::Magnet>("serial_board/magnet_control");
         ros::NodeHandle n_private("~");
         n_private.param("walk_vel", walk_vel, 1.0);
@@ -134,7 +136,7 @@ int main(int argc, char** argv)
     puts("Use 'left axis' to horizontal translate");
     puts("Use 'right axis' to yaw and up/down");
     puts("Hold 'R1' for fast movement");
-      puts("for test222");
+      puts("for test333");
     ros::spin();
 
     return(0);
@@ -146,6 +148,17 @@ void TeleopUAVJoy::JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
     bool dirtygripper=false;
 
     cmd.linear.x = cmd.linear.y = cmd.angular.z = cmd.linear.z = 0;
+    //if the joy get last, check the second, too large then stop...
+    if(stampsec==joy->header.stamp.sec)
+        stampcounter++;
+    else
+        stampcounter = 0;
+
+    stampsec = joy->header.stamp.sec;
+    if(stampsec==0)
+      {ROS_INFO("bad joy data");return; }
+    if(stampcounter > 20)
+      {DJI_M100->velocity_control(0,0,0,0,0);ROS_INFO("joy data lost, wait for recon");}
     //Gripper
     if(joy->buttons[PS3_AXIS_BUTTON_ACTION_CIRCLE]&&joy->buttons[PS3_AXIS_BUTTON_ACTION_TRIANGLE])
     {
@@ -199,7 +212,6 @@ void TeleopUAVJoy::JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
             float yaw = -300*joy->axes[PS3_AXIS_STICK_LEFT_LEFTWARDS];
             DJI_M100->gimbal_speed_control(roll,pitch,yaw);
         }
-            ros::Duration(0.2).sleep();
     }
 
     //Velocity
@@ -224,19 +236,23 @@ void TeleopUAVJoy::JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
     if(joy->buttons[PS3_BUTTON_START])
     {
         v_rc_checker++;
-        ros::Duration(0.5).sleep();
+        ros::Duration(0.1).sleep();
+	if(v_rc_checker%2)
+	  {
+	    ROS_INFO("ENABLE VIRTUAL RC MODE, BE CAREFUL!");
+	  }
+	else
+	  {
+	    ROS_INFO("QUIT VIRTUAL RC MODE, PLEASE USE DJI RC");
+	  }
     }
     if(v_rc_checker%2)
     {
         DJI_M100->virtual_rc_enable();
         DJI_M100->virtual_rc_control(v_rc);
-        ROS_INFO("ENABLE VIRTUAL RC MODE, BE CAREFUL!");
-        ros::Duration(0.005).sleep();
     }
     else
     {
         DJI_M100->virtual_rc_disable();
-        ROS_INFO("QUIT VIRTUAL RC MODE, PLEASE USE DJI RC");
-        ros::Duration(0.005).sleep();
     }
 }
