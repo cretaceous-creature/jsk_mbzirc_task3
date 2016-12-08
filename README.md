@@ -49,13 +49,16 @@ temporary 4 terminals
 `
 roslaunch dji_sdk sdk_manifold.launch
 `
+
 `
 sudo -s
 roslaunch dji_sdk_read_cam manifold_cam.launch
 `
+
 `
 rosrun jsk_task3_m100 uav_teleop_joy
 `
+
 `
 roslaunch jsk_task3_m100 jsk_udp.launch
 `
