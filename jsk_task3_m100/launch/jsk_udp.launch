@@ -1,7 +1,7 @@
 <!-- -*- mode: xml -*- -->
 <launch>
-  <arg name="REMOTE_IP" default="192.168.8.100"/>
-  <arg name="LOCAL_IP" default="localhost"/>
+  <arg name="REMOTE_IP" default="192.168.8.101"/>
+  <arg name="LOCAL_IP" default="192.168.8.100"/>
   <arg name="IMAGE_PORT" default="1118"/>
   <arg name="JOY_PORT" default="1119"/>
 
@@ -13,21 +13,20 @@
       <rosparam subst_value="true">
         message: jsk_network_tools/Remote_Image
         to_port: $(arg IMAGE_PORT)
-        send_rate: 3.0
+        send_rate: 10.0
         to_ip: "$(arg REMOTE_IP)"
-        bandwidth: 2800000
-        packet_size: 5000
+
       </rosparam>
-      <remap from="~input" to="/remote_image" />
+      <remap from="/dji_sdk/raw" to="/image_zenmus" />
 
     </node>
-    <node pkg="jsk_network_tools" type="silverhammer_lowspeed_receiver.py"
-          output="screen"
+    <node pkg="jsk_network_tools" type="silverhammer_highspeed_receiver.py"
+          output="screen" 
           name="joy_receiver">
       <rosparam subst_value="true">
         message: jsk_network_tools/Remote_Joy
         receive_port: $(arg JOY_PORT)
-        receive_ip: "$(arg REMOTE_IP)"
+        receive_ip: "$(arg LOCAL_IP)"
         event_driven: true
       </rosparam>
     </node>
