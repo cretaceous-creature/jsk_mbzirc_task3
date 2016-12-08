@@ -11,8 +11,11 @@ after that comment four lines in
 
 `
  server 0.debian.pool.ntp.org minpoll 3 maxpoll 15 maxdelay .010
+
  server 1.debian.pool.ntp.org minpoll 3 maxpoll 15 maxdelay .010
+
  server 2.debian.pool.ntp.org minpoll 3 maxpoll 15 maxdelay .010
+
  server 3.debian.pool.ntp.org minpoll 3 maxpoll 15 maxdelay .010
 `
 then restart the chrony service 
