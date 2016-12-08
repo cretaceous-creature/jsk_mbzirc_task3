@@ -22,6 +22,7 @@
   <run_depend>message_runtime</run_depend>
   <run_depend>dji_sdk_lib</run_depend>
   <run_depend>dji_sdk</run_depend>
+  <run_depend>jsk_network_tools</run_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
