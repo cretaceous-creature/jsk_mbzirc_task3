@@ -70,6 +70,14 @@ whole package or just use the jsk_network_tools sub-package
 roslaunch jsk_task3_m100 remotepc.launch
 `
 
+also the joy node and sixad
+
+`
+sixad -s
+
+rosrun joy joy_node
+`
+
 next step: write a node to compress the image.
 
 Feel free to ask...
