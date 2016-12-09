@@ -38,7 +38,9 @@ rosrun joy joy_node
 roslaunch jsk_task3_m100 remotepc.launch
 `
 
-for the last one, please open it and set the ip address correctly
+or just copy the remotepc.launch file to jsk_network_tools(under jsk_mbzirc_task3), and only build jsk_network_tools and launch from there
+
+### Please send you host pc wifi to ip 192.168.97.188 (connect to JSK300)
 
 ###M100 PC
 jsk-m100-a-c: 192.168.8.222
@@ -49,7 +51,6 @@ Username for both: ubuntu
 
 Passwd for both: jsk_mbzirc
 
-### First please send you host pc wifi to ip 192.168.97.188 (connect JSK300)
 
 ### ssh into jsk-m100-a-v, do 
 
