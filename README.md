@@ -45,25 +45,34 @@ for the last one, please open it and set the ip address correctly
 jsk-m100-a-c: 192.168.8.222
 jsk-m100-a-v: 192.168.8.111
 
-temporary 4 terminals
-`
-roslaunch dji_sdk sdk_manifold.launch
-`
+1. First please send you host pc wifi to ip 192.168.97.188 (connect JSK300)
 
-`
-sudo -s
-roslaunch dji_sdk_read_cam manifold_cam.launch
-`
-
-`
-rosrun jsk_task3_m100 uav_teleop_joy
-`
+2. ssh into jsk-m100-a-v, do 
 
 `
 roslaunch jsk_task3_m100 jsk_udp.launch
 `
 
-More details to be added.... Feel free to ask...
+3. ssh into v, then ssh into jsk-m100-a-c, do
+
+`
+sudo -s
+
+roslaunch jsk_task3_m100 jsk_task3_m100.launch
+`
+
+4. In your own PC, you can either copy and compile the 
+whole package or just use the jsk_network_tools sub-package
+(under jsk_mbzirc_task3, not the original version under jsk_common), do
+
+
+`
+roslaunch jsk_task3_m100 remotepc.launch
+`
+
+next step: write a node to compress the image.
+
+Feel free to ask...
 
 
 

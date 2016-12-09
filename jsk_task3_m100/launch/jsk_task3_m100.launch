@@ -7,16 +7,12 @@
 
  <!-- DJI SDK -->
   <include file="$(find dji_sdk)/launch/sdk_manifold.launch" >
-    <arg name="paused" default="$(arg paused)"/>
-    <arg name="debug" default="$(arg debug)"/>
   </include>
 
  <!-- TASK3 -->
   <group>
   <!-- launch the hsi_filter -->
   <include file="$(find dji_sdk_read_cam)/launch/manifold_cam.launch" >
-    <arg name="gray_or_rgb" default="$(arg imagerbg)"/>
-
   </include>
     <node pkg="jsk_task3_m100" type="uav_teleop_joy" name="uav_teleop_joy"
           launch-prefix="xterm -e">
