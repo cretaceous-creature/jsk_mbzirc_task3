@@ -13,11 +13,9 @@
       <rosparam subst_value="true">
         message: jsk_network_tools/Remote_Image
         to_port: $(arg IMAGE_PORT)
-        send_rate: 5
+        send_rate: 25
         to_ip: "$(arg REMOTE_IP)"
-
       </rosparam>
-      <remap from="/dji_sdk/raw" to="/image_zenmus" />
 
     </node>
     <node pkg="jsk_network_tools" type="silverhammer_highspeed_receiver.py"
@@ -32,4 +30,10 @@
     </node>
 
   </group>
+
+    <node name="republish" type="republish" pkg="image_transport" output="screen" args="raw in:=/image_zenmus compressed out:=/image_zenmus">
+    <remap from="/image_zenmus/compressed" to="/image_zenmus_c" /> 
+    <remap from="/image_zenmus_c/parameter_descriptions" to="/parameter_descriptions" /> 
+    <remap from="/image_zenmus_c/parameter_updates" to="/parameter_updates" /> 
+    </node>
 </launch>

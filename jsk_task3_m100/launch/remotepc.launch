@@ -29,6 +29,15 @@
     </node>
 
   </group>
+   
+  <group>
+    <node name="relay_image" type="relay" pkg="topic_tools" output="screen" args="/from_fc/image_zenmus_c /image_receive/compressed" />  
+    <node name="relay_description" type="relay" pkg="topic_tools" output="screen" args="/from_fc/parameter_descriptions /image_receive/compressed/parameter_descriptions" />    
+    <node name="relay_updates" type="relay" pkg="topic_tools" output="screen" args="/from_fc/parameter_updates /image_receive/compressed/parameter_updates" />         
+
+    <node name="image_receive" type="image_view" pkg="image_view"
+          output="screen" args="image:=/image_receive compressed" >
+    </node>
+  </group>
+
 </launch>
-
-

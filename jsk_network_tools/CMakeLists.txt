@@ -31,7 +31,7 @@ generate_dynamic_reconfigure_options(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  std_msgs sensor_msgs
+  std_msgs sensor_msgs dynamic_reconfigure
 )
 catkin_package(
   DEPENDS
