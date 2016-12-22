@@ -203,7 +203,7 @@ void TeleopUAVJoy::JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
     {
         if(joy->buttons[PS3_AXIS_BUTTON_ACTION_CROSS])
         {
-            DJI_M100->gimbal_angle_control(0,-300,0,1);
+            DJI_M100->gimbal_angle_control(0,-900,0,10);
         }
         else
         {

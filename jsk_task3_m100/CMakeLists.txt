@@ -6,7 +6,7 @@ set(CMAKE_BUILD_TYPE Debug)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
 roscpp rospy cv_bridge image_transport tf message_filters
-nav_msgs sensor_msgs dynamic_reconfigure dji_sdk_lib)
+nav_msgs sensor_msgs dynamic_reconfigure dji_sdk_lib tf)
 set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 find_package(OpenCV REQUIRED)
 add_message_files(
@@ -41,6 +41,7 @@ else()
 #task3 vision node
 add_executable(task3_vision src/task3vision/task3vision.cpp)
 target_link_libraries(task3_vision ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+
 endif(ENABLE_CUDA)
 #uav_teleop_keyboard node
 add_executable(uav_teleop_keyboard src/teleop/uav_teleop_keyboard.cpp)
@@ -48,6 +49,9 @@ target_link_libraries(uav_teleop_keyboard ${catkin_LIBRARIES})
 #uav_teleop_joy node
 add_executable(uav_teleop_joy src/teleop/uav_teleop_joy.cpp)
 target_link_libraries(uav_teleop_joy ${catkin_LIBRARIES})
+#gimbal_control node
+add_executable(gimbal_control src/gimbalcontrol/gimbal_control.cpp)
+target_link_libraries(gimbal_control ${catkin_LIBRARIES})
 #uav_treasure_pick node
 add_executable(uav_treasure_pick src/treasurepick/uav_treasure_pick.cpp)
 target_link_libraries(uav_treasure_pick ${catkin_LIBRARIES})
