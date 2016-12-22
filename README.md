@@ -15,6 +15,8 @@ Gohome:   L1 + R1 +  Square
 
 Gimbal:   L2 + L and R axis stick
 
+Gimbal face downward:   L2 + cross
+
 xyz+yaw:  L1 + L and R axis stick
 
 Fast Mode xyz+yaw: L1 + L2 + L and R axis stick (Be careful about this mode)
