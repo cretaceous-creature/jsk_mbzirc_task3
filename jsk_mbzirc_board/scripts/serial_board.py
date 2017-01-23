@@ -9,7 +9,7 @@ class Serial_board:
     def __init__(self):
         self.T_HEADER = 'TH'
         self.T_TAIL = 'TT'
-        self.Magdata = 'mag:!'
+        self.Magdata = 'g:!' # original is 'mag:!'
         self.port = '/dev/ttyUSB1'
         self.baud = 115200
         self.serialtimeout = 0.01
@@ -59,9 +59,8 @@ class Serial_board:
                 rospy.loginfo(data_in)
                 #data will be like mag:!5!
                 index = data_in.find(self.Magdata)
-                if not (index < 0):
-                    index +=5
-                    self._pub_magnet.publish(int(data_in[index:data_in.find('!',index)]))
+                if not (index < 0) and len(data_in) > index + 4:
+                    self._pub_magnet.publish(int(data_in[index + 3]))
             r.sleep()
 
 
