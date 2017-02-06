@@ -16,6 +16,8 @@
   <build_depend>roscpp</build_depend>
   <build_depend>message_generation</build_depend>
   <build_depend>message_runtime</build_depend>
+  <build_depend>jsk_mbzirc_board</build_depend>
+  <build_depend>dji_sdk</build_depend>
   <build_depend>dji_sdk_lib</build_depend>
 
   <run_depend>jsk_mbzirc_board</run_depend>
