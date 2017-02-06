@@ -2,6 +2,8 @@
 
 ## Usage:
 
+Use several package from jsk_mbzirc_task1_pkg which is private repository.
+
 ### UAV side:
 ```
 $ roslaunch jsk_task3_s900 s900_bringup.launch
