@@ -20,8 +20,7 @@
 //OPENCV
 #include <opencv2/highgui/highgui.hpp>
 #include <cv_bridge/cv_bridge.h>
-//#include <opencv2/cudafilters.hpp>
-//#include <opencv2/cudaimgproc.hpp>
+#include <opencv2/gpu/gpu.hpp>
 #include <opencv2/core/core.hpp>
 
 //msg headers.
@@ -84,9 +83,9 @@ private:
 public:
     void init()
     {
-        img_sub_  = new message_filters::Subscriber<sensor_msgs::Image>(nh_,"/downward_cam/camera/image",2);
-        camera_info_sub_ = new message_filters::Subscriber<sensor_msgs::CameraInfo>(nh_,"/downward_cam/camera/camera_info", 2);
-        uav_odom_sub_ = new message_filters::Subscriber<nav_msgs::Odometry>(nh_,"/ground_truth/state",2);
+        img_sub_  = new message_filters::Subscriber<sensor_msgs::Image>(nh_,"/image_zenmus",2);
+        camera_info_sub_ = new message_filters::Subscriber<sensor_msgs::CameraInfo>(nh_,"/dji_sdk/camera_info", 2);
+        uav_odom_sub_ = new message_filters::Subscriber<nav_msgs::Odometry>(nh_,"/dji_sdk/odometry",2);
         sync = new message_filters::Synchronizer<MySyncPolicy>(MySyncPolicy(30), *img_sub_, *camera_info_sub_, *uav_odom_sub_);
         sync->registerCallback(boost::bind(&task3_vision::imageCallback,this,_1,_2,_3));
 
@@ -104,13 +103,13 @@ public:
         h_max=120; s_max=200; v_max=255;
         h_min=0;   s_min=101; v_min=80;
         cluster_thre_dist = 18;
-        downsample_cluster_size = 1000;
+        downsample_cluster_size =1000;
         min_cluster_size = 10;
 
         //initialize base_link to camera optical link
         BaseToCamera.setOrigin(tf::Vector3(0,0,-0.05));
         BaseToCamera.setRotation(tf::Quaternion(0.707, -0.707, 0.000, -0.000));
-
+        std::cout<<"initialization finished"<<std::endl;
 
     }
 
@@ -147,20 +146,17 @@ void task3_vision::imageCallback(const sensor_msgs::ImageConstPtr& img,
         std::clock_t start;
         double duration;
         start = std::clock();
-        /**********first HSI Filter**********/
-#ifdef GPU_EN
-        cv::cuda::cvtColor(raw_image,hsv_image,cv::COLOR_BGR2HSV);
 
-#else
+        /**************
+         * Considering two methods.
+         *************/
+
+
+        /**********first HSI Filter**********/
         cv::cvtColor(raw_image,hsv_image,cv::COLOR_BGR2HSV);
         cv::inRange(hsv_image, cv::Scalar(h_min, s_min, v_min, 0), cv::Scalar(h_max, s_max, v_max, 0), hsv_filtered);
         cv::imshow("hsv_filtered",hsv_filtered);
-#endif
         /**********Then Euclidean Clustering**********/
-#ifdef GPU_EN
-        cv::cuda::cvtColor(raw_image,hsv_image,cv::COLOR_BGR2HSV);
-
-#else
         //clustering..
         std::vector<cv::Point> pts_raw;
         findNonZero(hsv_filtered, pts_raw);
@@ -223,7 +219,6 @@ void task3_vision::imageCallback(const sensor_msgs::ImageConstPtr& img,
         std::cout<<"process_time is "<< duration << " second" <<'\n';
         // cv::findContours();
         // cv::partition();
-#endif
 
         cv::waitKey(10);
     }
