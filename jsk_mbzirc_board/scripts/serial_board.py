@@ -12,11 +12,13 @@ class Serial_board:
         self.Magdata = 'mag:!'
         self.port = '/dev/ttyUSB1'
         self.baud = 115200
+        self.verbose = True
         self.serialtimeout = 0.01
         self.updaterate = 20    #20hz
         #initialize the parameters
         self.port = rospy.get_param("~port", self.port)
         self.baud = rospy.get_param('~baud', self.baud)
+        self.verbose = rospy.get_param('~verbose', self.verbose)
         self.serialtimeout = rospy.get_param('~serialtimeout', self.serialtimeout)
         self.updaterate = rospy.get_param('~updaterate', self.updaterate)
         rospy.loginfo("port is : %s" % self.port)
@@ -56,7 +58,8 @@ class Serial_board:
 
             data_in = self.ser.readall()
             if data_in:
-                rospy.loginfo(data_in)
+                if self.verbose:
+                    rospy.loginfo(data_in)
                 #data will be like mag:!5!
                 index = data_in.find(self.Magdata)
                 if not (index < 0):
