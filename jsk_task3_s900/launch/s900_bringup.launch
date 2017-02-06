@@ -1,0 +1,29 @@
+<!-- -*- mode: xml -*- -->
+<launch>
+  <arg name="LOCAL_IP" default="192.168.97.10"/> <!-- UAV -->
+  <arg name="REMOTE_IP" default="192.168.97.102"/> <!-- Remote PC -->
+
+  <!-- Base Platform -->
+  <include file="$(find jsk_mbzirc_task1_common)/launch/m100_bringup.launch" >
+    <arg name="use_fisheye" value="true" />
+    <arg name="use_guidance" value="false" />
+  </include>
+
+  <!-- Magnet -->
+  <include file="$(find jsk_mbzirc_board)/launch/magnet.launch">
+    <arg name="verbose" value="false" />
+  </include>
+
+  <!-- Joy Teleop -->
+  <node pkg="jsk_task3_m100" type="uav_teleop_joy" name="uav_teleop_joy"
+        launch-prefix="xterm -e">
+  </node>
+
+  <!-- Communication -->
+  <include file="$(find jsk_task3_m100)/launch/jsk_udp.launch" >
+    <arg name="LOCAL_IP" value="$(arg LOCAL_IP)"/>
+    <arg name="REMOTE_IP" value="$(arg REMOTE_IP)"/>
+    <arg name="raw_image" value="/camera/image_rect"/>
+  </include>
+</launch>
+

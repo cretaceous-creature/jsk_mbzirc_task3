@@ -8,7 +8,6 @@
   <group ns="silverhammer">
     <!-- FC to OCS -->
     <node pkg="jsk_network_tools" type="silverhammer_highspeed_streamer.py"
-          output="screen"
           name="joy_streamer">
       <rosparam subst_value="true">
         message: jsk_network_tools/Remote_Joy
@@ -18,7 +17,6 @@
       </rosparam>
     </node>
     <node pkg="jsk_network_tools" type="silverhammer_highspeed_receiver.py"
-          output="screen"
           name="image_receiver">
       <rosparam subst_value="true">
         message: jsk_network_tools/Remote_Image

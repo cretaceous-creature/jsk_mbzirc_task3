@@ -6,7 +6,7 @@ set(CMAKE_BUILD_TYPE Debug)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
 roscpp rospy cv_bridge image_transport tf message_filters
-nav_msgs sensor_msgs dynamic_reconfigure dji_sdk_lib tf)
+nav_msgs sensor_msgs dynamic_reconfigure jsk_mbzirc_board dji_sdk dji_sdk_lib tf)
 set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 find_package(OpenCV REQUIRED)
 add_message_files(

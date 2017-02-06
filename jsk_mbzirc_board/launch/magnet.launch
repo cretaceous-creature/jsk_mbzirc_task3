@@ -1,10 +1,12 @@
 <launch>
   <arg name="port" default="/dev/jsk_board" />
   <arg name="baud" default="115200" />
+  <arg name="verbose" default="true" />
 
   <node pkg="jsk_mbzirc_board" type="serial_board.py" name="serial_board" output="screen">
     <param name="port" value="$(arg port)" />
     <param name="baud" value="$(arg baud)" />
+    <param name="verbose" value="$(arg verbose)" />
   </node>
 
 </launch>
