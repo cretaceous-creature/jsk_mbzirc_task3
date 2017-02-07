@@ -304,12 +304,11 @@ void task3_vision::ImageCallback(const sensor_msgs::ImageConstPtr& img,
         // this->clusters = this->EuclideanCluster(&hsv_filtered_all, n_ds);
         //method 2:
         {
-//                    this->clusters = this->EuclideanCluster(&hsv_filtered_r, &lbl, n_ds, 'r');
-//                    this->clusters = this->EuclideanCluster(&hsv_filtered_g, &lbl, n_ds, 'g');
-//                    this->clusters = this->EuclideanCluster(&hsv_filtered_b, &lbl, n_ds, 'b');
-//                    this->clusters = this->EuclideanCluster(&hsv_filtered_ye, &lbl, n_ds, 'y');
-//                    this->clusters = this->EuclideanCluster(&hsv_filtered_or, &lbl, n_ds, 'o');
-//                    imshow("Labels", lbl);
+            this->clusters = this->EuclideanCluster(&hsv_filtered_r, &lbl, n_ds, 'r');
+            this->EuclideanCluster(&hsv_filtered_g, &lbl, n_ds, 'g');
+            this->EuclideanCluster(&hsv_filtered_b, &lbl, n_ds, 'b');
+            this->EuclideanCluster(&hsv_filtered_ye, &lbl, n_ds, 'y');
+            this->EuclideanCluster(&hsv_filtered_or, &lbl, n_ds, 'o');
         }
         //method 3:
         {
@@ -323,34 +322,31 @@ void task3_vision::ImageCallback(const sensor_msgs::ImageConstPtr& img,
 //            {
 //                cv::Scalar color;
 //                color = cv::Scalar(rand() & 255, rand() & 255, rand() & 255);
-//                drawContours( hsv_filtered_all, contours, i, color, 2, 8, hierarchy, 0, cv::Point() );
+//                drawContours(lbl, contours, i, color, 2, 8, hierarchy, 0, cv::Point() );
 //            }
         }
         //method 4:
         {
-
-            std::vector<cv::Vec3f> circles;
-
-            /// Apply the Hough Transform to find the circles
-            cv::HoughCircles( hsv_filtered_all, circles, CV_HOUGH_GRADIENT,
-                              1, 10, 100, 30, 1, 200);
-            /// Draw the circles detected
-            for( size_t i = 0; i < circles.size(); i++ )
-            {
-                cv::Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-                int radius = cvRound(circles[i][2]);
-                cv::Scalar color;
-                color = cv::Scalar(rand() & 255, rand() & 255, rand() & 255);
-                // circle center
-                cv::circle( hsv_filtered_all, center, 3, color, -1, 8, 0 );
-                // circle outline
-                cv::circle( hsv_filtered_all, center, radius, color, 3, 8, 0 );
-             }
-
+//            std::vector<cv::Vec3f> circles;
+//            /// Apply the Hough Transform to find the circles
+//            cv::HoughCircles( hsv_filtered_all, circles, CV_HOUGH_GRADIENT,
+//                              1, 10, 100, 30, 1, 200);
+//            /// Draw the circles detected
+//            for( size_t i = 0; i < circles.size(); i++ )
+//            {
+//                cv::Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+//                int radius = cvRound(circles[i][2]);
+//                cv::Scalar color;
+//                color = cv::Scalar(rand() & 255, rand() & 255, rand() & 255);
+//                // circle center
+//                cv::circle(lbl, center, 3, color, -1, 8, 0 );
+//                // circle outline
+//                cv::circle(lbl, center, radius, color, 3, 8, 0 );
+//             }
         }
 
-
         cv::imshow("all space",hsv_filtered_all);
+        imshow("Labels", lbl);
 
         //timer end
         duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
