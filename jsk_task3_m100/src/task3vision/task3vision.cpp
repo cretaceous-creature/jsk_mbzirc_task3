@@ -55,21 +55,25 @@ private:
     message_filters::Synchronizer<MySyncPolicy> *sync;
     tf::Transform BaseToCamera;
     geometry_msgs::PoseArray object_clusteres;
-
     ros::Publisher obj_clus_pub_;
     //task3
     ros::Subscriber pick_state_sub_;
     std_msgs::Bool pick_state;
+    ros::Publisher filtered_img_pub;
+    ros::Publisher label_img_pub;
     //dynamic reconfigure
     dynamic_reconfigure::Server<jsk_mbzirc_tasks::FilterparamConfig> server;
     dynamic_reconfigure::Server<jsk_mbzirc_tasks::FilterparamConfig>::CallbackType f;
+    //dynamic reconfigure parameters
     int s_max,v_max,s_min,v_min;
     int r_off,g_off,b_off,ye_off,or_off;
     bool debug_show;
     int cluster_thre_dist;
     int downsample_cluster_size, min_cluster_size;
+    double fake_dist;
+    //param
     std::vector<std::vector<cv::Point> > clusters;
-#define HSVRED 0
+#define HSVRED -5
 #define HSVGREEN 60
 #define HSVBLUE 120
 #define HSVYELLOW 30
@@ -98,13 +102,16 @@ public:
         sync->registerCallback(boost::bind(&task3_vision::ImageCallback,this,_1,_2,_3));
 
         obj_clus_pub_ = nh_.advertise<geometry_msgs::PoseArray>("/obj_cluster/centroid_pose",1);
+        filtered_img_pub = nh_.advertise<sensor_msgs::Image>("/filtered_all",1);
+        label_img_pub = nh_.advertise<sensor_msgs::Image>("/label_img",1);
 
         /*** dynamic reconfigure ***/
         f = boost::bind(&task3_vision::DynamicReconfigureCallback, this, _1,_2);
         server.setCallback(f);
-        cluster_thre_dist = 18;
+        cluster_thre_dist = 30;
         downsample_cluster_size =1000;
         min_cluster_size = 10;
+        fake_dist = 0;
 
         //initialize base_link to camera optical link
         BaseToCamera.setOrigin(tf::Vector3(0,0,-0.05));
@@ -123,6 +130,7 @@ public:
       r_off = config.r_offset;g_off = config.g_offset;b_off = config.b_offset;
       ye_off = config.ye_offset;or_off = config.or_offset;
       debug_show = config.debug_show;
+      fake_dist = config.fake_height;
 
       cluster_thre_dist = config.cluster_threhold_dist;
       downsample_cluster_size = config.downsample_cluster_size;
@@ -163,7 +171,7 @@ inline std::vector<cv::Point> DownSamplePoints(cv::Mat *img_input, int n)
 std::vector<std::vector<cv::Point> > task3_vision::EuclideanCluster(
         cv::Mat *image_input, cv::Mat3b *lbl, int n_factor, char c)
 {
-    std::vector<std::vector<cv::Point>> contours;
+    std::vector<std::vector<cv::Point> > contours;
     std::vector<cv::Point> pts = DownSamplePoints(image_input, n_factor);
 
     if(pts.size())
@@ -173,7 +181,8 @@ std::vector<std::vector<cv::Point> > task3_vision::EuclideanCluster(
         contours.resize(n_labels);  //contours are the clusteres with points.
         for (int i = 0; i < pts.size(); ++i)
         {
-            contours[labels[i]].push_back(pts[i]);
+            if(pts[i].x!=0 && pts[i].y!=0)
+                contours[labels[i]].push_back(pts[i]);
         }
         /****
      * labels vector gives every point a label by labels[pts[n]], we need a parameter to remove
@@ -191,38 +200,52 @@ std::vector<std::vector<cv::Point> > task3_vision::EuclideanCluster(
             else
             {
                 //get the centroid of each contours
+                geometry_msgs::Pose tmp;
+                for(int i = 0; i<itr->size(); i++)
+                {
+                    tmp.position.x += itr->at(i).x;
+                    tmp.position.y += itr->at(i).y;
+                }
+                tmp.position.x /= itr->size();
+                tmp.position.y /= itr->size();
+                // pose orientation: x: points size, y: color, z orientation
+                tmp.orientation.x = itr->size();
+                tmp.orientation.y = c;
+                object_clusteres.poses.push_back(tmp);
             }
         }
         int label_size = contours.size();
+        if(debug_show)
+            std::cout<<"child points size is:" <<pts.size()<<std::endl<< "clusters are::" << label_size <<std::endl;
         for (int i = 0; i < label_size; i++)
           {
-            cv::Vec3b color;
+            cv::Scalar color;
             switch(c)
             {
             case 'a':
-                color = cv::Vec3b(rand() & 255, rand() & 255, rand() & 255);
+                color = cv::Scalar(rand() & 255, rand() & 255, rand() & 255);
                 break;
             case 'r':
-                color = cv::Vec3b(0, 0, 255);
+                color = cv::Scalar(0, 0, 255);
                 break;
             case 'g':
-                color = cv::Vec3b(0, 255, 0);
+                color = cv::Scalar(0, 255, 0);
                 break;
             case 'b':
-                color = cv::Vec3b(255, 0, 0);
+                color = cv::Scalar(255, 0, 0);
                 break;
             case 'y':
-                color = cv::Vec3b(0, 255, 255);
+                color = cv::Scalar(0, 255, 255);
                 break;
             case 'o':
-                color = cv::Vec3b(0, 130, 255);
+                color = cv::Scalar(0, 130, 255);
                 break;
             default:
                 break;
             }
             for(int j = 0; j< contours[i].size(); j++)
             {
-                (*lbl)(contours[i].at(j)) = color;
+                cv::circle(*lbl, contours[i].at(j), 1, color, -1, 8, 0 );
             }
           }
     }
@@ -237,12 +260,16 @@ std::vector<std::vector<cv::Point> > task3_vision::EuclideanCluster(
 void task3_vision::ImageCallback(const sensor_msgs::ImageConstPtr& img,
                                        const sensor_msgs::CameraInfoConstPtr& cam_info,
                                        const nav_msgs::OdometryConstPtr& odom)
-{
+{ double uav_h = odom->pose.pose.position.z;
     try
     {
         cv::Mat raw_image = cv_bridge::toCvCopy(img,"bgr8")->image;
         cv::Mat hsv_image;
         cv::Mat hsv_filtered_r, hsv_filtered_g, hsv_filtered_b, hsv_filtered_ye, hsv_filtered_or, hsv_filtered_all;
+        //assign the dist threshold by considering the height...
+        cluster_thre_dist = 50 / (fake_dist+0.1);
+        cluster_thre_dist = cluster_thre_dist<10?10:cluster_thre_dist;
+        //cluster_thre_dist = 40 / (odom->pose.pose.position.z + 0.1);
         /***********counting the timer********/
         std::clock_t start;
         double duration;
@@ -266,8 +293,11 @@ void task3_vision::ImageCallback(const sensor_msgs::ImageConstPtr& img,
         cv::inRange(hsv_image, cv::Scalar(HSVORANGE-or_off, s_min, v_min, 0), cv::Scalar(HSVORANGE+or_off, s_max, v_max, 0), hsv_filtered_or);
         }
         //show image of r g b ye or
+        hsv_filtered_all = hsv_filtered_r | hsv_filtered_g | hsv_filtered_b |  hsv_filtered_ye |  hsv_filtered_or;
+
         if(debug_show)
         {
+            cv::imshow("all space",hsv_filtered_all);
             cv::imshow("red space",hsv_filtered_r);
             cv::imshow("green space",hsv_filtered_g);
             cv::imshow("blue space",hsv_filtered_b);
@@ -277,13 +307,11 @@ void task3_vision::ImageCallback(const sensor_msgs::ImageConstPtr& img,
         else
         {
             cv::destroyWindow("red space");cv::destroyWindow("green space");cv::destroyWindow("blue space");
-            cv::destroyWindow("yellow space");cv::destroyWindow("orange space");
+            cv::destroyWindow("yellow space");cv::destroyWindow("orange space");cv::destroyWindow("all space");
         }
 
         /**********Then Euclidean Clustering**********/
-        //clustering..
-        hsv_filtered_all = hsv_filtered_r | hsv_filtered_g | hsv_filtered_b |  hsv_filtered_ye |  hsv_filtered_or;
-
+        //clustering..        
         /***
          * Two methods:
          * 1: combine all and do clustering
@@ -296,12 +324,17 @@ void task3_vision::ImageCallback(const sensor_msgs::ImageConstPtr& img,
                 + cv::countNonZero(hsv_filtered_or);
         //n_ds is the downsample factor
         int n_ds = ptr_all/downsample_cluster_size + 1; //begin from  1
+        if(debug_show)
+            std::cout<<"All points num are: "<<ptr_all<<std::endl;
 
+        //clear the previous data
         this->clusters.clear();
+        this->object_clusteres.poses.clear();
+        this->object_clusteres.header = odom->header;
         // Build a vector of random color, one for each class (label) and draw the labels
         cv::Mat3b lbl(hsv_filtered_all.rows, hsv_filtered_all.cols, cv::Vec3b(0, 0, 0));
         //method 1:
-        // this->clusters = this->EuclideanCluster(&hsv_filtered_all, n_ds);
+//         this->clusters = this->EuclideanCluster(&hsv_filtered_all, &lbl, n_ds, 'a');
         //method 2:
         {
             this->clusters = this->EuclideanCluster(&hsv_filtered_r, &lbl, n_ds, 'r');
@@ -345,8 +378,57 @@ void task3_vision::ImageCallback(const sensor_msgs::ImageConstPtr& img,
 //             }
         }
 
-        cv::imshow("all space",hsv_filtered_all);
+        for (int i = 0; i < object_clusteres.poses.size(); i++)
+        {
+            cv::Scalar color;
+            char c = (char)object_clusteres.poses.at(i).orientation.y;
+            switch(c)
+            {
+            case 'a':
+                color = cv::Scalar(rand() & 255, rand() & 255, rand() & 255);
+                break;
+            case 'r':
+                color = cv::Scalar(0, 0, 255);
+                break;
+            case 'g':
+                color = cv::Scalar(0, 255, 0);
+                break;
+            case 'b':
+                color = cv::Scalar(255, 0, 0);
+                break;
+            case 'y':
+                color = cv::Scalar(0, 255, 255);
+                break;
+            case 'o':
+                color = cv::Scalar(0, 130, 255);
+                break;
+            default:
+                break;
+            }
+            cv::circle(lbl,
+                       cv::Point((int)object_clusteres.poses.at(i).position.x,
+                                 (int)object_clusteres.poses.at(i).position.y),
+                       (int)object_clusteres.poses.at(i).orientation.x/2, color, 10, 8, 0 );
+        }
         imshow("Labels", lbl);
+
+        cv::Mat test;
+        cv::cvtColor(lbl,test,cv::COLOR_BGR2GRAY);
+
+        if(debug_show)
+            std::cout<<"label points are: "<< cv::countNonZero(test)<<std::endl;
+
+        //publish the cluster position
+        obj_clus_pub_.publish(object_clusteres);
+
+        cv_bridge::CvImage filtered_ros_img;
+        filtered_ros_img.header = img->header;
+        filtered_ros_img.encoding = "mono8";
+        filtered_ros_img.image = hsv_filtered_all;
+        filtered_img_pub.publish(filtered_ros_img.toImageMsg());
+        filtered_ros_img.encoding = "bgr8";
+        filtered_ros_img.image = lbl;
+        label_img_pub.publish(filtered_ros_img.toImageMsg());
 
         //timer end
         duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
