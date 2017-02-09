@@ -33,7 +33,7 @@ public:
         //DJI SDK
         DJI_M100 = new DJIDrone(n_);
         //data init
-        DJI_M100->gimbal_angle_control(0,-900,0,20); //2 senconds send pitch to 90 degree
+        DJI_M100->gimbal_angle_control(0,0,-900,20); //2 senconds send pitch to 90 degree
         //sub and srv
         odom_sub_ = n_.subscribe<nav_msgs::Odometry>("/dji_sdk/odometry",10,&Gimbalcontrol::OdomCallback,this);
         //ros::NodeHandle n_private("~");

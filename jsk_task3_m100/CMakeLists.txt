@@ -40,13 +40,14 @@ add_definitions(-DGPU_EN)
 add_executable(task3_vision src/task3vision/task3vision.cpp)
 target_link_libraries(task3_vision ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${CUDA_LIBRARIES})
 else()
-#add_executable(uav_img2pointcloud src/img2pointcloud/uav_img2pointcloud.cpp)
-#target_link_libraries(uav_img2pointcloud ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #task3 vision node
 add_executable(task3_vision src/task3vision/task3vision.cpp)
 target_link_libraries(task3_vision ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 endif(ENABLE_CUDA)
+#uav_img2pointcloud projection node
+add_executable(uav_img2pointcloud src/img2pointcloud/uav_img2pointcloud.cpp)
+target_link_libraries(uav_img2pointcloud ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #uav_teleop_keyboard node
 add_executable(uav_teleop_keyboard src/teleop/uav_teleop_keyboard.cpp)
 target_link_libraries(uav_teleop_keyboard ${catkin_LIBRARIES})
