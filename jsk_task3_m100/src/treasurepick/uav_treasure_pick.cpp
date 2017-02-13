@@ -25,6 +25,10 @@
 //pcl
 #include <ctime>
 //the store the detected objects
+//dji sdk
+#include <dji_sdk/dji_sdk.h>
+#include <dji_sdk/dji_drone.h>
+
 typedef struct
 {
     geometry_msgs::Pose pose;
@@ -54,26 +58,29 @@ private:
     std_msgs::Bool mag_on;
     nav_msgs::Odometry uav_odom;
     std::vector<Treasure> treasure_vec;
-    const double distthreshold = 0.2;
+    const double distthreshold = 1; //here we assume that no object is near with 1 meter
     enum State_Machine{Picking, Placing, Searching}uav_task_state;
-
+    // drone name
+    DJIDrone* DJI_M100;
 
 public:
     void init()
     {
+        //DJI SDK
+        DJI_M100 = new DJIDrone(nh_);
        //subscriber
-        object_pose_sub_ = nh_.subscribe("/camera/cluster_decomposer/centroid_pose_array",
+        object_pose_sub_ = nh_.subscribe("/obj_cluster/centroid_pose",
                                          1,&treasure_pick::ObjPoseCallback,this);
-        uav_odom_sub_ = nh_.subscribe("/ground_truth/state",10,&treasure_pick::OdomCallback,this);
+        uav_odom_sub_ = nh_.subscribe("/dji_sdk/odometry",10,&treasure_pick::OdomCallback,this);
         pick_state_sub_ = nh_.subscribe("/gazebo/magnetget",1,&treasure_pick::PickCallback,this);
         aim_pose_pub_ = nh_.advertise<geometry_msgs::Pose>("aimpose",1);
         mag_pub_ = nh_.advertise<std_msgs::Bool>("/mag_on",1);
         pick_state.data = false;
         //box pose, when picked, go to the box...
-        box_pose.position.x = -65;
-        box_pose.position.y = 25;
+        box_pose.position.x = 0;
+        box_pose.position.y = 0;
         box_pose.position.z = 1.8;
-        search_pose.position.z = 5.5; //6 meters high...
+        search_pose.position.z = 5; //5 meters high...
         aim_pose = search_pose;
         uav_task_state = Searching;
 
@@ -112,9 +119,14 @@ public:
                 treasure_vec.at(j).visible_times -= 1; //every object minus 1
                 if(DistLessThanThre(treasure_vec.at(j).pose.position
                                     ,posearray.poses.at(i).position
-                                    ,distthreshold))
+                                    ,distthreshold)
+                        &&(treasure_vec.at(j).pose.orientation.y ==
+                           posearray.poses.at(i).orientation.y))
                 {
                     treasure_vec.at(j).visible_times += 8; //plus 5
+                    //here we also need to consider the size of the detected points
+                    // if 400 points are detected then plus 4
+                    treasure_vec.at(j).visible_times +=  posearray.poses.at(i).orientation.x/100;
                     //if they are the same one, update the pose
                     treasure_vec.at(j).pose = posearray.poses.at(i);
                     treasure_vec.at(j).visible_times
@@ -139,13 +151,13 @@ public:
                     treasure_vec.erase(treasure_vec.begin() + j);
                 //remove the one near the box
                 //-65,25,
-                if((treasure_vec.at(j).pose.position.x>-70&&
-                        treasure_vec.at(j).pose.position.x<-60&&
-                        treasure_vec.at(j).pose.position.y>20&&
-                        treasure_vec.at(j).pose.position.y<30)
-                        ||(treasure_vec.at(j).pose.position.y>-0.1&&
-                        treasure_vec.at(j).pose.position.y<0.1))
-                    treasure_vec.erase(treasure_vec.begin() + j);
+//                if((treasure_vec.at(j).pose.position.x>-70&&
+//                        treasure_vec.at(j).pose.position.x<-60&&
+//                        treasure_vec.at(j).pose.position.y>20&&
+//                        treasure_vec.at(j).pose.position.y<30)
+//                        ||(treasure_vec.at(j).pose.position.y>-0.1&&
+//                        treasure_vec.at(j).pose.position.y<0.1))
+//                    treasure_vec.erase(treasure_vec.begin() + j);
             }
         }
         //publish the pose, maybe we should use the same one, now use the first one
@@ -206,10 +218,10 @@ public:
                (fabs(uav_odom.twist.twist.linear.y)<0.2)&&
                (fabs(uav_odom.twist.twist.linear.z)<0.2))
               {
-                int randx = rand()%80;
-                int randy = rand()%40;
-                search_pose.position.x = randx-40;
-                search_pose.position.y = randy-20;
+                int randx = rand()%8;
+                int randy = rand()%8;
+                search_pose.position.x = randx-4;
+                search_pose.position.y = randy-4;
                 aim_pose = search_pose;
                 ROS_WARN("Send random search place at: %f,%f,%f",
                          search_pose.position.x,
@@ -241,6 +253,11 @@ public:
             nh_.setParam("Uav_max_velocity",maxspeed);
             nh_.setParam("Kp",Kp);
             aim_pose_pub_.publish(aim_pose);
+            
+	    if(aim_pose.position.z>0.2)
+	      aim_pose.position.z -=0.02;
+            DJI_M100->local_position_control(aim_pose.position.x,aim_pose.position.y,
+                                             aim_pose.position.z,0);
           }
     }
     void PickCallback(const std_msgs::Bool pickstate)

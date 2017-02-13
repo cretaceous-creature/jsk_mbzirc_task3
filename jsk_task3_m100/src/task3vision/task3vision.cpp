@@ -76,7 +76,7 @@ private:
     //param
     std::vector<std::vector<cv::Point> > clusters;
 #define HSVRED -5
-#define HSVGREEN 60
+#define HSVGREEN 70 //because our color is more like blue....lol
 #define HSVBLUE 120
 #define HSVYELLOW 30
 #define HSVORANGE 20
@@ -91,7 +91,7 @@ private:
             return ((lhs.x - rhs.x)*(lhs.x - rhs.x) + (lhs.y - rhs.y)*(lhs.y - rhs.y)) < _dist2;
         }
     };
-#define Ground_Z -1
+#define Ground_Z 0.2
    //test
     tf::TransformBroadcaster br;
 public:
@@ -172,14 +172,16 @@ cv::Mat task3_vision::Projection_matrix(const sensor_msgs::CameraInfoConstPtr& c
     //get extrisic, to the world coordinate
     //since we use gimbal, set the pose orientation
     //always face down
-    tf::poseMsgToTF(odom->pose.pose,tfpose);
-    tf::Matrix3x3 rot = tfpose.getBasis();
-    tfScalar yaw, pitch, roll;
-    rot.getEulerYPR(yaw, pitch, roll);
-    rot.setEulerYPR(yaw,0,0);
-    tfpose.setBasis(rot);
-
-    extrisic = BaseToCamera*tfpose.inverse();
+    {  //skip local position, directly use uav center coordinate
+//    tf::poseMsgToTF(odom->pose.pose,tfpose);
+//    tf::Matrix3x3 rot = tfpose.getBasis();
+//    tfScalar yaw, pitch, roll;
+//    rot.getEulerYPR(yaw, pitch, roll);
+//    rot.setEulerYPR(yaw,0,0);
+//    tfpose.setBasis(rot);
+    }
+    BaseToCamera.setOrigin(tf::Vector3(0,0,odom->pose.pose.position.z));
+    extrisic = BaseToCamera;//*tfpose.inverse();
     //pinv of projection matrix...
     for(int i = 0; i < 3; i++)
         for(int j = 0; j < 4; j++)
@@ -352,8 +354,8 @@ void task3_vision::ImageCallback(const sensor_msgs::ImageConstPtr& img,
         cv::Mat hsv_filtered_r, hsv_filtered_g, hsv_filtered_b, hsv_filtered_ye, hsv_filtered_or, hsv_filtered_all;
         //assign the dist threshold by considering the height...
         cluster_thre_dist = 50 / (fake_dist+0.1);
+        cluster_thre_dist = 50 / (odom->pose.pose.position.z + 0.1);
         cluster_thre_dist = cluster_thre_dist<10?10:cluster_thre_dist;
-        //cluster_thre_dist = 40 / (odom->pose.pose.position.z + 0.1);
         /***********counting the timer********/
         std::clock_t start;
         double duration;
@@ -424,8 +426,10 @@ void task3_vision::ImageCallback(const sensor_msgs::ImageConstPtr& img,
             this->clusters = this->EuclideanCluster(&hsv_filtered_r, &lbl, n_ds, 'r');
             this->EuclideanCluster(&hsv_filtered_g, &lbl, n_ds, 'g');
             this->EuclideanCluster(&hsv_filtered_b, &lbl, n_ds, 'b');
+            //because of the color of background, no orange..
+
             this->EuclideanCluster(&hsv_filtered_ye, &lbl, n_ds, 'y');
-            this->EuclideanCluster(&hsv_filtered_or, &lbl, n_ds, 'o');
+            //this->EuclideanCluster(&hsv_filtered_or, &lbl, n_ds, 'o');
         }
         //method 3:
         {
@@ -494,11 +498,13 @@ void task3_vision::ImageCallback(const sensor_msgs::ImageConstPtr& img,
                                  (int)object_clusteres.poses.at(i).position.y),
                        (int)object_clusteres.poses.at(i).orientation.x/2, color, 10, 8, 0 );
         }
-        imshow("Labels", lbl);
         cv::Mat test;
         cv::cvtColor(lbl,test,cv::COLOR_BGR2GRAY);
         if(debug_show)
+        {
             std::cout<<"label points are: "<< cv::countNonZero(test)<<std::endl;
+            imshow("Labels", lbl);
+        }
 
         cv::Mat P = Projection_matrix(cam_info,odom);
         double a[4],b[4],c[4];
@@ -516,6 +522,19 @@ void task3_vision::ImageCallback(const sensor_msgs::ImageConstPtr& img,
             c[2] = P.at<double>(2, 2);
             c[3] = P.at<double>(2, 3);
         }
+        //transfrom to world coordinate, just plus the drone coordinate
+        //since we ignore the pitch and roll, just use the yaw
+        //double yaw = odom->pose.pose.orientation
+         tf::Quaternion q(odom->pose.pose.orientation.x,
+                 odom->pose.pose.orientation.y,
+                 odom->pose.pose.orientation.z,
+                 odom->pose.pose.orientation.w);
+         tf::Matrix3x3 m(q);
+         double r,p,y;
+         m.getEulerYPR(y,p,r);
+         //y=3.14/2 -y;
+         std::cout<<std::cos(y)<<",  "<<std::sin(y)<<std::endl;
+
         for (int i = 0; i < object_clusteres.poses.size(); i++)
         {
             float A[2][2],bv[2];
@@ -527,8 +546,18 @@ void task3_vision::ImageCallback(const sensor_msgs::ImageConstPtr& img,
             bv[0]= a[2]*Ground_Z + a[3] - j*c[2]*Ground_Z - j*c[3];
             bv[1] = b[2]*Ground_Z + b[3] - k*c[2]*Ground_Z - k*c[3];
             float DomA = A[1][1]*A[0][0]-A[0][1]*A[1][0];
-            object_clusteres.poses[i].position.x = (A[1][1]*bv[0]-A[0][1]*bv[1])/DomA;
-            object_clusteres.poses[i].position.y = (A[0][0]*bv[0]-A[1][0]*bv[0])/DomA;
+            double local_x = (A[1][1]*bv[0]-A[0][1]*bv[1])/DomA;
+            double local_y = (A[0][0]*bv[0]-A[1][0]*bv[0])/DomA;
+            //local position
+            object_clusteres.poses[i].position.x = local_x;
+            object_clusteres.poses[i].position.y = local_y;
+            //global position
+            object_clusteres.poses[i].position.x = odom->pose.pose.position.x +
+                    local_x * std::cos(y) + local_y * std::sin(y);
+            object_clusteres.poses[i].position.y = odom->pose.pose.position.y -
+                    local_y * std::cos(y) + local_x * std::sin(y);
+            object_clusteres.poses[i].position.z = Ground_Z;
+
 
         }
 

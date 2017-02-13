@@ -10,7 +10,7 @@ class Serial_board:
         self.T_HEADER = 'TH'
         self.T_TAIL = 'TT'
         self.Magdata = 'mag:!'
-        self.port = '/dev/ttyTHS2'
+        self.port = '/dev/ttyUSB0'
         self.baud = 115200
         self.verbose = True
         self.serialtimeout = 0.01
