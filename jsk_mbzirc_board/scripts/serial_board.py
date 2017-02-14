@@ -75,7 +75,8 @@ class Serial_board:
                     index +=2
                     distbyte = data_in[index:data_in.find('#',index)]
                     if distbyte:
-                        rospy.loginfo(int(distbyte.strip('\0')))
+                        if self.verbose:
+                            rospy.loginfo(int(distbyte.strip('\0')))
                         self._pub_pointlaser.publish(int(distbyte.strip('\0')))
             r.sleep()
 
