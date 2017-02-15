@@ -11,13 +11,13 @@
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>
-#include <std_msgs/Bool.h>
+#include <std_msgs/Int16.h>
 //sys lib
 #include <iostream>
 #include <string>
 #include <stdlib.h>
 //srv
-#include <std_srvs/Empty.h>
+#include <jsk_mbzirc_board/Magnet.h>
 //#include <gazebo_msgs/GetModelState.h>
 //boost
 #include <boost/random.hpp>
@@ -46,7 +46,7 @@ private:
     //subscriber
     ros::Subscriber object_pose_sub_;
     ros::Subscriber uav_odom_sub_;
-    ros::Subscriber pick_state_sub_;
+    ros::Subscriber mag_feedback_sub_;
     //publisher
     ros::Publisher aim_pose_pub_;
     ros::Publisher mag_pub_;
@@ -54,11 +54,18 @@ private:
     geometry_msgs::Pose aim_pose;
     geometry_msgs::Pose box_pose;
     geometry_msgs::Pose search_pose;
-    std_msgs::Bool pick_state;
-    std_msgs::Bool mag_on;
+    std_msgs::Int16 magnet_state;// how many switches are on
+    int switch_on_counter;
+    //srv
+    ros::ServiceClient mag_srv_;
+    jsk_mbzirc_board::Magnet mag_srv_status;
+
+    std_msgs::Int16 mag_on;
     nav_msgs::Odometry uav_odom;
     std::vector<Treasure> treasure_vec;
+
     const double distthreshold = 1; //here we assume that no object is near with 1 meter
+
     enum State_Machine{Picking, Placing, Searching}uav_task_state;
     // drone name
     DJIDrone* DJI_M100;
@@ -72,10 +79,15 @@ public:
         object_pose_sub_ = nh_.subscribe("/obj_cluster/centroid_pose",
                                          1,&treasure_pick::ObjPoseCallback,this);
         uav_odom_sub_ = nh_.subscribe("/dji_sdk/odometry",10,&treasure_pick::OdomCallback,this);
-        pick_state_sub_ = nh_.subscribe("/gazebo/magnetget",1,&treasure_pick::PickCallback,this);
+        mag_feedback_sub_ = nh_.subscribe("/serial_board/magnet_feedback",1,&treasure_pick::PickCallback,this);
         aim_pose_pub_ = nh_.advertise<geometry_msgs::Pose>("aimpose",1);
-        mag_pub_ = nh_.advertise<std_msgs::Bool>("/mag_on",1);
-        pick_state.data = false;
+        //srv
+        mag_srv_ = nh_.serviceClient<jsk_mbzirc_board::Magnet>("serial_board/magnet_control");
+        mag_srv_status.request.on = false;
+        mag_srv_status.request.time_ms = 2000; //3 second
+
+        magnet_state.data = 0;
+        switch_on_counter = 0;
         //box pose, when picked, go to the box...
         box_pose.position.x = 0;
         box_pose.position.y = 0;
@@ -147,7 +159,7 @@ public:
                     }
                 }
                 //remove the one that can't be seen for more than 15 times.
-                if(treasure_vec.at(j).visible_times < -10)
+                if(treasure_vec.at(j).visible_times < -30)
                     treasure_vec.erase(treasure_vec.begin() + j);
                 //remove the one near the box
                 //-65,25,
@@ -163,14 +175,11 @@ public:
         //publish the pose, maybe we should use the same one, now use the first one
         for(int i=0;i<treasure_vec.size();i++)
         {
-            if(treasure_vec.at(i).visible_times>30)
+            if(treasure_vec.at(i).visible_times>40)
             {
                 aim_pose = treasure_vec.at(i).pose;
                 //aim_pose_pub_.publish(aim_pose);
                 uav_task_state = Picking;
-                //open magnet
-                mag_on.data = true;
-                mag_pub_.publish(mag_on);
                 break;
             }
         }
@@ -188,12 +197,16 @@ public:
             if((fabs(uav_odom.pose.pose.position.x-box_pose.position.x)<0.15)&&
                (fabs(uav_odom.pose.pose.position.y-box_pose.position.y)<0.15)&&
                (fabs(uav_odom.pose.pose.position.z-box_pose.position.z)<0.3)&&
-               (fabs(uav_odom.twist.twist.linear.x)<0.08)&&
-               (fabs(uav_odom.twist.twist.linear.y)<0.08)&&
-               (fabs(uav_odom.twist.twist.linear.z)<0.08))
+               (fabs(uav_odom.twist.twist.linear.x)<0.3)&&
+               (fabs(uav_odom.twist.twist.linear.y)<0.3)&&
+               (fabs(uav_odom.twist.twist.linear.z)<0.3))
               {
-                mag_on.data = false;
-                mag_pub_.publish(mag_on);
+                //here to release the magnets
+                if(mag_srv_.call(mag_srv_status))
+                    ROS_INFO("Gripper Released for 2000 ms");
+                else
+                    ROS_INFO("Fail to release the gripper");
+
                 aim_pose = search_pose;
                 ROS_WARN("left treasure at %f,%f,%f",
                          uav_odom.pose.pose.position.x,
@@ -237,15 +250,15 @@ public:
           {
             //picking
             //consider pick failure
-            if((fabs(uav_odom.pose.pose.position.x-aim_pose.position.x)<0.2)&&
-               (fabs(uav_odom.pose.pose.position.y-aim_pose.position.y)<0.2)&&
-               (fabs(uav_odom.pose.pose.position.z-aim_pose.position.z-0.2)<0.2)&&
-               (fabs(uav_odom.twist.twist.linear.x)<0.05)&&
-               (fabs(uav_odom.twist.twist.linear.y)<0.05)&&
-               (fabs(uav_odom.twist.twist.linear.z)<0.05))
-              {
-                aim_pose = search_pose;
-              }
+//            if((fabs(uav_odom.pose.pose.position.x-aim_pose.position.x)<0.2)&&
+//               (fabs(uav_odom.pose.pose.position.y-aim_pose.position.y)<0.2)&&
+//               (fabs(uav_odom.pose.pose.position.z-aim_pose.position.z-0.2)<0.2)&&
+//               (fabs(uav_odom.twist.twist.linear.x)<0.05)&&
+//               (fabs(uav_odom.twist.twist.linear.y)<0.05)&&
+//               (fabs(uav_odom.twist.twist.linear.z)<0.05))
+//              {
+//                aim_pose = search_pose;
+//              }
 
 
             float Kp = 0.1;
@@ -260,20 +273,24 @@ public:
                                              aim_pose.position.z,0);
           }
     }
-    void PickCallback(const std_msgs::Bool pickstate)
+
+    void PickCallback(const std_msgs::Int16 pickstate)
     {
 
-        if(!pick_state.data&&pickstate.data) //from false to true
+
+        if(!magnet_state.data&&pickstate.data) //from false to true, swtich from 0 to 1234(on)
         {
+            switch_on_counter++;
             uav_task_state = Placing;
         }
-        else if(pick_state.data&&!pickstate.data) //frome true to false
+        else if(magnet_state.data&&!pickstate.data) //frome true to false, swtich from 1234 to 0(release)
         {
+            switch_on_counter = 0;
             uav_task_state = Searching;
             aim_pose = search_pose;
             treasure_vec.clear();
         }
-        pick_state = pickstate;
+        magnet_state = pickstate;
     }
 
     ~treasure_pick()

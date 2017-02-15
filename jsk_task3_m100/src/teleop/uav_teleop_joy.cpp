@@ -86,7 +86,6 @@ public:
         DJI_M100 = new DJIDrone(n_);
         //data init
         cmd.linear.x = cmd.linear.y = cmd.angular.z = 0;
-        mag_status_.request.time_ms = 500;  //500ms
         stampcounter =0;
 	v_rc_checker = 0;
         v_rc[0] = 1024; // roll    +- 660
@@ -164,13 +163,27 @@ void TeleopUAVJoy::JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
     {
         //release the gripper
         mag_status_.request.on = false;
+        mag_status_.request.time_ms = 1000;
         if(mag_srv_.call(mag_status_))
-            ROS_INFO("Gripper Released for 500 ms");
+            ROS_INFO("Gripper Released for 1000 ms");
         else
             ROS_INFO("Fail to release the gripper");
         ros::Duration(0.2).sleep();
         dirtygripper = true;
     }
+    if(joy->buttons[PS3_AXIS_BUTTON_ACTION_SQUARE]&&joy->buttons[PS3_AXIS_BUTTON_ACTION_TRIANGLE])
+    {
+        //release the gripper
+        mag_status_.request.on = false;
+        mag_status_.request.time_ms = 0;
+        if(mag_srv_.call(mag_status_))
+            ROS_INFO("Gripper Disable");
+        else
+            ROS_INFO("Fail to disable gripper");
+        ros::Duration(0.2).sleep();
+        dirtygripper = true;
+    }
+
     //Obtain and release control ability
     {
         if(joy->buttons[PS3_BUTTON_REAR_LEFT_2]&&joy->buttons[PS3_BUTTON_REAR_RIGHT_2]&&
