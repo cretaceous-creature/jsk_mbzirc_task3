@@ -12,6 +12,7 @@
 #include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Int16.h>
+#include <sensor_msgs/LaserScan.h>
 //sys lib
 #include <iostream>
 #include <string>
@@ -28,7 +29,8 @@
 //dji sdk
 #include <dji_sdk/dji_sdk.h>
 #include <dji_sdk/dji_drone.h>
-
+#include <Eigen/Core>
+#include <tf/transform_broadcaster.h>
 typedef struct
 {
     geometry_msgs::Pose pose;
@@ -47,6 +49,7 @@ private:
     ros::Subscriber object_pose_sub_;
     ros::Subscriber uav_odom_sub_;
     ros::Subscriber mag_feedback_sub_;
+    ros::Subscriber range_sensor_sub_;
     //publisher
     ros::Publisher aim_pose_pub_;
     ros::Publisher mag_pub_;
@@ -69,7 +72,11 @@ private:
     enum State_Machine{Picking, Placing, Searching}uav_task_state;
     // drone name
     DJIDrone* DJI_M100;
-
+    
+    double vel_nav_gain_;
+    double vel_nav_limit_;
+    double range_sensor_value_;
+    bool range_sensor_update_;
 public:
     void init()
     {
@@ -81,7 +88,8 @@ public:
         uav_odom_sub_ = nh_.subscribe("/dji_sdk/odometry",10,&treasure_pick::OdomCallback,this);
         mag_feedback_sub_ = nh_.subscribe("/serial_board/magnet_feedback",1,&treasure_pick::PickCallback,this);
         aim_pose_pub_ = nh_.advertise<geometry_msgs::Pose>("aimpose",1);
-        //srv
+        range_sensor_sub_ = nh_.subscribe("/guidance/ultrasonic", 1, &treasure_pick::RangeSensorCallback, this);
+	//srv
         mag_srv_ = nh_.serviceClient<jsk_mbzirc_board::Magnet>("serial_board/magnet_control");
         mag_srv_status.request.on = false;
         mag_srv_status.request.time_ms = 2000; //3 second
@@ -96,6 +104,9 @@ public:
         aim_pose = search_pose;
         uav_task_state = Searching;
 
+	vel_nav_limit_ = 0.4;
+	vel_nav_gain_ = 1.0;
+	range_sensor_update_ = false;	
     }
     inline bool DistLessThanThre(geometry_msgs::Point P1, geometry_msgs::Point P2, double threshold)
     {
@@ -159,7 +170,7 @@ public:
                     }
                 }
                 //remove the one that can't be seen for more than 15 times.
-                if(treasure_vec.at(j).visible_times < -30)
+                if(treasure_vec.at(j).visible_times < -20)
                     treasure_vec.erase(treasure_vec.begin() + j);
                 //remove the one near the box
                 //-65,25,
@@ -175,7 +186,7 @@ public:
         //publish the pose, maybe we should use the same one, now use the first one
         for(int i=0;i<treasure_vec.size();i++)
         {
-            if(treasure_vec.at(i).visible_times>40)
+            if(treasure_vec.at(i).visible_times>35)
             {
                 aim_pose = treasure_vec.at(i).pose;
                 //aim_pose_pub_.publish(aim_pose);
@@ -186,6 +197,7 @@ public:
     }
     void OdomCallback(const nav_msgs::Odometry odom)
     {
+	if (!range_sensor_update_) return;
         uav_odom = odom; //update
         //publish by status of the state machine
         //can be set to a fixed frequency..
@@ -266,11 +278,21 @@ public:
             nh_.setParam("Uav_max_velocity",maxspeed);
             nh_.setParam("Kp",Kp);
             aim_pose_pub_.publish(aim_pose);
-            
-	    if(aim_pose.position.z>0.2)
-	      aim_pose.position.z -=0.02;
-            DJI_M100->local_position_control(aim_pose.position.x,aim_pose.position.y,
-                                             aim_pose.position.z,0);
+	    double aim_z = uav_odom.pose.pose.position.z;
+	    if(uav_odom.pose.pose.position.z > 0)
+	      aim_z -= 1;
+
+	    tf::Vector3 target_pos(aim_pose.position.x, aim_pose.position.y, aim_pose.position.z);
+	    tf::Vector3 uav_pos(uav_odom.pose.pose.position.x, uav_odom.pose.pose.position.y, (uav_odom.pose.pose.position.z < 1.0) ? range_sensor_value_ : uav_odom.pose.pose.position.z);
+  	    tf::Vector3 delta = target_pos - uav_pos;
+       	    tf::Vector3 nav_vel = delta * vel_nav_gain_;
+    	    if (nav_vel.length() > vel_nav_limit_) {
+      	        nav_vel *= (vel_nav_limit_ / nav_vel.length());
+    	    }   
+	    DJI_M100->velocity_control(1, nav_vel.x(), nav_vel.y(), nav_vel.z(), 0);
+	    //DJI_M100->local_position_control(aim_pose.position.x,aim_pose.position.y,
+            //                                 aim_z,0);
+	    std::cout<<"control drone to go:"<< aim_pose.position.x<<aim_pose.position.y<<aim_z<<std::endl;
           }
     }
 
@@ -291,6 +313,12 @@ public:
             treasure_vec.clear();
         }
         magnet_state = pickstate;
+    }
+	
+    void RangeSensorCallback(const sensor_msgs::LaserScanConstPtr& msg)
+    {
+	range_sensor_update_ = true;
+	range_sensor_value_ = msg->ranges[0];	
     }
 
     ~treasure_pick()

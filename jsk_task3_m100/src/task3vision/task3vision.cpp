@@ -186,7 +186,7 @@ cv::Mat task3_vision::Projection_matrix(const sensor_msgs::CameraInfoConstPtr& c
         //    rot.setEulerYPR(yaw,0,0);
         //    tfpose.setBasis(rot);
     }
-    BaseToCamera.setOrigin(tf::Vector3(0,0,uav_h));
+    BaseToCamera.setOrigin(tf::Vector3(0.2,0,uav_h));
     extrisic = BaseToCamera;//*tfpose.inverse();
     //pinv of projection matrix...
     for(int i = 0; i < 3; i++)
@@ -355,7 +355,7 @@ void task3_vision::ImageCallback(const sensor_msgs::ImageConstPtr& img,
                                  const nav_msgs::OdometryConstPtr& odom)
 {
     double uav_h;
-    if(odom->pose.pose.position.z<1) //less than 1 meter
+    if(odom->pose.pose.position.z<1&&us_data->ranges.at(0)>0.05) //less than 1 meter
         uav_h = us_data->ranges.at(0);
     else
         uav_h = odom->pose.pose.position.z;
