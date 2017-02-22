@@ -32,6 +32,8 @@ class Serial_board:
         self._pub_magnet = rospy.Publisher("/serial_board/magnet_feedback", Int16, queue_size = 1)
         #laser distance publisher
         self._pub_pointlaser = rospy.Publisher("/serial_board/point_laser", Int16, queue_size = 1)
+        #lidar distance publisher
+        self._pub_lidarlaser = rospy.Publisher("/serial_board/lidar_laser", Int16, queue_size = 1)
 
 
     #delete function
@@ -75,9 +77,14 @@ class Serial_board:
                     index +=2
                     distbyte = data_in[index:data_in.find('#',index)]
                     if distbyte:
-                        if self.verbose:
-                            rospy.loginfo(int(distbyte.strip('\0')))
                         self._pub_pointlaser.publish(int(distbyte.strip('\0')))
+                    #next get the lidar data
+                    index = data_in.find('#$')
+                    index +=2
+                    lidar_data = data_in[index:data_in.find('$',index)]
+                    if lidar_data:
+                        self._pub_lidarlaser.publish(int(lidar_data.strip('\0')))
+                            
             r.sleep()
 
 
