@@ -27,7 +27,6 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <jsk_task3_m100/ProjectionMatrix.h>
-
 #include <nav_msgs/Odometry.h>
 #include <tf/transform_listener.h>
 #include <geometry_msgs/Pose.h>
@@ -35,6 +34,7 @@
 #include <std_msgs/Float64.h>
 #include <iostream>
 #include <std_msgs/Bool.h>
+#include <std_msgs/Int16.h>
 #include <geometry_msgs/PoseArray.h>
 #include <sensor_msgs/LaserScan.h>
 //for test
@@ -46,24 +46,26 @@
 
 class task3_vision
 {
-    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::LaserScan,
-    nav_msgs::Odometry> MySyncPolicy;
+    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::CameraInfo, nav_msgs::Odometry> MySyncPolicy;
 
 private:
 
     message_filters::Subscriber<sensor_msgs::Image> *img_sub_;
     message_filters::Subscriber<sensor_msgs::CameraInfo> *camera_info_sub_;
-    message_filters::Subscriber<sensor_msgs::LaserScan> *ultra_sonic_sub_;
     message_filters::Subscriber<nav_msgs::Odometry> *uav_odom_sub_;
     ros::NodeHandle nh_;
     message_filters::Synchronizer<MySyncPolicy> *sync;
     tf::Transform BaseToCamera;
     geometry_msgs::PoseArray object_clusteres;
+    geometry_msgs::PoseArray object_clusteres_local;
     ros::Publisher param_matrix_pub_;
     ros::Publisher obj_clus_pub_;
+    ros::Publisher obj_clus_pub_local_;
     //task3
-    ros::Subscriber pick_state_sub_;
-    std_msgs::Bool pick_state;
+    ros::Subscriber guidance_sub_;
+    ros::Subscriber lidar_sub_;
+    sensor_msgs::LaserScan us_data;
+    float lidar_data;
     ros::Publisher filtered_img_pub;
     ros::Publisher label_img_pub;
     //dynamic reconfigure
@@ -79,7 +81,7 @@ private:
     //param
     std::vector<std::vector<cv::Point> > clusters;
 #define HSVRED -5
-#define HSVGREEN 70 //because our color is more like blue....lol
+#define HSVGREEN 50 //because our color is more like blue....lol
 #define HSVBLUE 120
 #define HSVYELLOW 30
 #define HSVORANGE 20
@@ -103,13 +105,15 @@ public:
         img_sub_  = new message_filters::Subscriber<sensor_msgs::Image>(nh_,"/image_zenmus",1);
         camera_info_sub_ = new message_filters::Subscriber<sensor_msgs::CameraInfo>(nh_,"/dji_sdk/camera_info", 1);
         uav_odom_sub_ = new message_filters::Subscriber<nav_msgs::Odometry>(nh_,"/dji_sdk/odometry",1);
-        ultra_sonic_sub_ = new message_filters::Subscriber<sensor_msgs::LaserScan>(nh_,"/guidance/ultrasonic",1);
-        sync = new message_filters::Synchronizer<MySyncPolicy>(MySyncPolicy(10), *img_sub_, *camera_info_sub_, *ultra_sonic_sub_, *uav_odom_sub_);
-        sync->registerCallback(boost::bind(&task3_vision::ImageCallback,this,_1,_2,_3,_4));
+        lidar_sub_ = nh_.subscribe<std_msgs::Int16>("/serial_board/lidar_laser",1,&task3_vision::LidarCallback,this);
+        guidance_sub_ = nh_.subscribe<sensor_msgs::LaserScan>("/guidance/ultrasonic",1,&task3_vision::GuidanceCallback,this);
+        sync = new message_filters::Synchronizer<MySyncPolicy>(MySyncPolicy(10), *img_sub_, *camera_info_sub_, *uav_odom_sub_);
+        sync->registerCallback(boost::bind(&task3_vision::ImageCallback,this,_1,_2,_3));
         std::string topic2 = nh_.resolveName("projection_matrix");
         param_matrix_pub_ = nh_.advertise<jsk_task3_m100::ProjectionMatrix>(topic2,1);
 
         obj_clus_pub_ = nh_.advertise<geometry_msgs::PoseArray>("/obj_cluster/centroid_pose",1);
+        obj_clus_pub_local_ = nh_.advertise<geometry_msgs::PoseArray>("/obj_cluster/centroid_pose_local",1);
         filtered_img_pub = nh_.advertise<sensor_msgs::Image>("/filtered_all",1);
         label_img_pub = nh_.advertise<sensor_msgs::Image>("/label_img",1);
 
@@ -127,10 +131,19 @@ public:
         std::cout<<"initialization finished"<<std::endl;
 
     }
+    void LidarCallback(const std_msgs::Int16 data)
+    {
+        lidar_data = (float)data.data;
+        lidar_data /= 100; //from cm to meter
+    }
+
+    void GuidanceCallback(const sensor_msgs::LaserScan data)
+    {
+        us_data = data;
+    }
 
     void ImageCallback(const sensor_msgs::ImageConstPtr& img,
                        const sensor_msgs::CameraInfoConstPtr& cam_info,
-                       const sensor_msgs::LaserScanConstPtr& us_data,
                        const nav_msgs::OdometryConstPtr& odom);
     void DynamicReconfigureCallback(jsk_mbzirc_tasks::FilterparamConfig &config, uint32_t level)
     {
@@ -186,7 +199,7 @@ cv::Mat task3_vision::Projection_matrix(const sensor_msgs::CameraInfoConstPtr& c
         //    rot.setEulerYPR(yaw,0,0);
         //    tfpose.setBasis(rot);
     }
-    BaseToCamera.setOrigin(tf::Vector3(0.2,0,uav_h));
+    BaseToCamera.setOrigin(tf::Vector3(0,0.2,uav_h));
     extrisic = BaseToCamera;//*tfpose.inverse();
     //pinv of projection matrix...
     for(int i = 0; i < 3; i++)
@@ -351,12 +364,13 @@ std::vector<std::vector<cv::Point> > task3_vision::EuclideanCluster(
 ****/
 void task3_vision::ImageCallback(const sensor_msgs::ImageConstPtr& img,
                                  const sensor_msgs::CameraInfoConstPtr& cam_info,
-                                 const sensor_msgs::LaserScanConstPtr& us_data,
                                  const nav_msgs::OdometryConstPtr& odom)
 {
     double uav_h;
-    if(odom->pose.pose.position.z<1&&us_data->ranges.at(0)>0.05) //less than 1 meter
-        uav_h = us_data->ranges.at(0);
+    if(odom->pose.pose.position.z<1&&us_data.ranges.size()&&us_data.ranges.at(0)>0.05) //less than 1 meter
+        uav_h = us_data.ranges.at(0);
+    else if(odom->pose.pose.position.z<1&&lidar_data>0&&lidar_data<2) //less than 1 meter
+        uav_h = lidar_data;
     else
         uav_h = odom->pose.pose.position.z;
 
@@ -545,7 +559,7 @@ void task3_vision::ImageCallback(const sensor_msgs::ImageConstPtr& img,
         tf::Matrix3x3 m(q);
         double r,p,y;
         m.getEulerYPR(y,p,r);
-        //y=3.14/2 -y;
+        object_clusteres_local = object_clusteres;
         for (int i = 0; i < object_clusteres.poses.size(); i++)
         {
             float A[2][2],bv[2];
@@ -560,8 +574,8 @@ void task3_vision::ImageCallback(const sensor_msgs::ImageConstPtr& img,
             double local_x = (A[1][1]*bv[0]-A[0][1]*bv[1])/DomA;
             double local_y = (A[0][0]*bv[0]-A[1][0]*bv[0])/DomA;
             //local position
-            object_clusteres.poses[i].position.x = local_x;
-            object_clusteres.poses[i].position.y = local_y;
+            object_clusteres_local.poses[i].position.x = local_x;
+            object_clusteres_local.poses[i].position.y = local_y;
             //global position
             object_clusteres.poses[i].position.x = odom->pose.pose.position.x +
                     local_x * std::cos(y) + local_y * std::sin(y);
@@ -574,6 +588,7 @@ void task3_vision::ImageCallback(const sensor_msgs::ImageConstPtr& img,
 
         //publish the cluster position
         obj_clus_pub_.publish(object_clusteres);
+        obj_clus_pub_local_.publish(object_clusteres_local);
 
         cv_bridge::CvImage filtered_ros_img;
         filtered_ros_img.header = img->header;

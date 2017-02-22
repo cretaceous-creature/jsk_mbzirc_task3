@@ -81,7 +81,7 @@ public:
     void init()
     {
         //DJI SDK
-        DJI_M100 = new DJIDrone(nh_);
+//        DJI_M100 = new DJIDrone(nh_);
        //subscriber
         object_pose_sub_ = nh_.subscribe("/obj_cluster/centroid_pose",
                                          1,&treasure_pick::ObjPoseCallback,this);
@@ -229,7 +229,7 @@ public:
         else if(uav_task_state==Searching)
           {
             float Kp = 0.1;
-            float searchspeed = 4.0;
+            float searchspeed = 1.0;
             nh_.setParam("Uav_max_velocity",searchspeed);
             nh_.setParam("Kp",Kp);
            /*here we need to check the if the search aim_pose
@@ -274,25 +274,13 @@ public:
 
 
             float Kp = 0.1;
-            float maxspeed = 8.0;
+            float maxspeed = 1.0;
             nh_.setParam("Uav_max_velocity",maxspeed);
             nh_.setParam("Kp",Kp);
             aim_pose_pub_.publish(aim_pose);
-	    double aim_z = uav_odom.pose.pose.position.z;
-	    if(uav_odom.pose.pose.position.z > 0)
-	      aim_z -= 1;
 
-	    tf::Vector3 target_pos(aim_pose.position.x, aim_pose.position.y, aim_pose.position.z);
-	    tf::Vector3 uav_pos(uav_odom.pose.pose.position.x, uav_odom.pose.pose.position.y, (uav_odom.pose.pose.position.z < 1.0) ? range_sensor_value_ : uav_odom.pose.pose.position.z);
-  	    tf::Vector3 delta = target_pos - uav_pos;
-       	    tf::Vector3 nav_vel = delta * vel_nav_gain_;
-    	    if (nav_vel.length() > vel_nav_limit_) {
-      	        nav_vel *= (vel_nav_limit_ / nav_vel.length());
-    	    }   
-	    DJI_M100->velocity_control(1, nav_vel.x(), nav_vel.y(), nav_vel.z(), 0);
-	    //DJI_M100->local_position_control(aim_pose.position.x,aim_pose.position.y,
-            //                                 aim_z,0);
-	    std::cout<<"control drone to go:"<< aim_pose.position.x<<aim_pose.position.y<<aim_z<<std::endl;
+//	    DJI_M100->local_position_control(aim_pose.position.x,aim_pose.position.y,aim_z,0);
+//        std::cout<<"control drone to go:"<< aim_pose.position.x<<aim_pose.position.y<<aim_z<<std::endl;
           }
     }
 

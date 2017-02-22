@@ -61,8 +61,8 @@ target_link_libraries(gimbal_control ${catkin_LIBRARIES})
 add_executable(uav_treasure_pick src/treasurepick/uav_treasure_pick.cpp)
 target_link_libraries(uav_treasure_pick ${catkin_LIBRARIES})
 #uav_treasure_move node
-#add_executable(uav_treasure_move src/treasurepick/uav_treasure_move.cpp)
-#target_link_libraries(uav_treasure_move ${catkin_LIBRARIES})
+add_executable(uav_treasure_move src/treasurepick/uav_treasure_move.cpp)
+target_link_libraries(uav_treasure_move ${catkin_LIBRARIES})
 ######################
 ## CFG Generation ##
 ######################
