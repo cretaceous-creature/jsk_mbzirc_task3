@@ -1,0 +1,39 @@
+<!-- -*- mode: xml -*- -->
+<launch>
+  <arg name="paused" default="false"/>
+  <arg name="debug" default="false"/>
+  <arg name="vision" default="true"/>
+  <arg name="motion" default="false"/>
+  <arg name="LOCAL_IP" default="192.168.97.200"/> <!-- UAV -->
+  <arg name="REMOTE_IP" default="192.168.97.188"/> <!-- Remote PC -->
+
+ <!-- DJI SDK -->
+  <include file="$(find jsk_task3_m100)/launch/jsk_udp.launch" >
+	 <arg name="LOCAL_IP" value="$(arg LOCAL_IP)"/>
+	 <arg name="REMOTE_IP" value="$(arg REMOTE_IP)"/>
+  </include>
+ <!-- Magnet -->
+  <include file="$(find jsk_mbzirc_board)/launch/magnet.launch">
+      <arg name="verbose" value="false" />
+  </include>
+
+  <group if="$(arg vision)">
+       <!-- gimbal control, always facing down -->
+    <node pkg="jsk_task3_m100" type="gimbal_control" name="gimbal_control">
+    </node>
+       <!-- gimbal control, always facing down -->
+    <node pkg="jsk_task3_m100" type="task3_vision" name="task3_vision">
+    </node>
+  </group>
+
+  <group if="$(arg motion)">
+       <!-- uav_treasure_pick -->
+    <node pkg="jsk_task3_m100" type="uav_treasure_pick" name="uav_treasure_pick">
+    </node>
+       <!-- uav_treasure_move -->
+    <node pkg="jsk_task3_m100" type="uav_treasure_move" name="uav_treasure_move">
+    </node>
+  </group>
+
+</launch>
+
