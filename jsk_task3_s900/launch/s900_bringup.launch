@@ -4,9 +4,10 @@
   <arg name="REMOTE_IP" default="192.168.97.102"/> <!-- Remote PC -->
 
   <!-- Base Platform -->
-  <include file="$(find jsk_mbzirc_task1_common)/launch/m100_bringup.launch" >
-    <arg name="use_fisheye" value="true" />
-    <arg name="use_guidance" value="false" />
+  <include file="$(find jsk_mbzirc_task1_common)/launch/uav_bringup.launch" >
+    <arg name="frame_rate" value="20" />
+    <arg name="dji_version" default="A32_31" />
+    <arg name="dji_port" default="/dev/ttyTHS1" />
   </include>
 
   <!-- Magnet -->
