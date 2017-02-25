@@ -68,10 +68,12 @@ target_link_libraries(uav_treasure_move ${catkin_LIBRARIES})
 ######################
 generate_dynamic_reconfigure_options(
 cfg/Filterparam.cfg
+cfg/Controlparam.cfg
 #...
 )
 # make sure configure headers are built before any node using them
 add_dependencies(task3_vision ${PROJECT_NAME}_gencfg)
+add_dependencies(uav_treasure_move ${PROJECT_NAME}_gencfg)
 ###################################
 ## catkin specific configuration ##
 ###################################

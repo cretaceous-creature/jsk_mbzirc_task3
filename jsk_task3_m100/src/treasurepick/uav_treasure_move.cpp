@@ -14,6 +14,9 @@
 #include <tf/tf.h>
 #include <tf/transform_listener.h>
 #include <sensor_msgs/LaserScan.h>
+//rqt_reconfig
+#include <dynamic_reconfigure/server.h>
+#include <jsk_task3_m100/ControlparamConfig.h>
 //sys lib
 #include <iostream>
 #include <string>
@@ -52,24 +55,32 @@ private:
     geometry_msgs::Twist vel_cmd_uav;
     geometry_msgs::Twist diff_twist, d_diff_twist, i_diff_twist;
     double uav_h;
-
+    //dynamic reconfigure
+    dynamic_reconfigure::Server<jsk_mbzirc_tasks::ControlparamConfig> server;
+    dynamic_reconfigure::Server<jsk_mbzirc_tasks::ControlparamConfig>::CallbackType f;
+    double Kp,Ki,Kd,MAXSPEED;
     // drone name
     DJIDrone* DJI_M100;
 
 public:
-    void init()
-    {
-        //DJI SDK
-        DJI_M100 = new DJIDrone(nh_);
 
-        float Kp = 0.01;
-        float Kd = 1;
-        float Ki = 0.1;
-        float MAXSPEED = 1.0;
+    void DynamicReconfigureCallback(jsk_mbzirc_tasks::ControlparamConfig &config, uint32_t level)
+    {
+        Kp = config.Kp;
+        Ki = config.Ki;
+        Kd = config.Kd;
+        MAXSPEED = config.maxspeed;
         nh_.setParam("Kp",Kp);
         nh_.setParam("Kd",Kd);
         nh_.setParam("Ki",Ki);
         nh_.setParam("Uav_max_velocity",MAXSPEED);
+
+    }
+
+    void init()
+    {
+        //DJI SDK
+        DJI_M100 = new DJIDrone(nh_);
 
         //subscriber
         aim_pose_sub_ = nh_.subscribe("/aimpose",1,&uav_move::AimPoseCallback,this);
@@ -77,6 +88,9 @@ public:
         obj_sub_local_ = nh_.subscribe("/obj_cluster/centroid_pose_local",1,&uav_move::ObjPoseLocalCallback,this);
         guidance_sub_ = nh_.subscribe("/guidance/ultrasonic", 1, &uav_move::UltraSonicCallback, this);
 
+        /*** dynamic reconfigure ***/
+        f = boost::bind(&uav_move::DynamicReconfigureCallback, this, _1,_2);
+        server.setCallback(f);
     }
 
     void UltraSonicCallback(const sensor_msgs::LaserScan data)
@@ -142,14 +156,6 @@ public:
         //PID control the diff
        // vel_world_uav = obj_vel;  //send the local velocity of object
 
-        float Kp, Kd, Ki,MAXSPEED;
-        //get param
-        nh_.getParam("Kp",Kp);
-        nh_.getParam("Kd",Kd);
-        nh_.getParam("Ki",Ki);
-        nh_.getParam("Uav_max_velocity",MAXSPEED);
-
-
 
         vel_cmd_uav.linear.x += Kp * aim_local_pose.position.x - Kd * d_diff_twist.linear.x
                 + Ki*2 * i_diff_twist.linear.x;
@@ -168,8 +174,8 @@ public:
         vel_cmd_uav.linear.y = vel_cmd_uav.linear.y<-MAXSPEED?-MAXSPEED:vel_cmd_uav.linear.y;
         vel_cmd_uav.linear.z = vel_cmd_uav.linear.z<-3.0?-3.0:vel_cmd_uav.linear.z;
 
-        DJI_M100->velocity_control(0,vel_cmd_uav.linear.x,vel_cmd_uav.linear.y,vel_cmd_uav.linear.z,0);
-        std::cout<<"the velocity is :"<< vel_cmd_uav.linear.x << "," << vel_cmd_uav.linear.y << ","<<
+	        DJI_M100->velocity_control(0,vel_cmd_uav.linear.x,-vel_cmd_uav.linear.y,vel_cmd_uav.linear.z,0);
+        std::cout<<"the velocity is :"<< vel_cmd_uav.linear.x << "," << -vel_cmd_uav.linear.y << ","<<
                    vel_cmd_uav.linear.z << std::endl;
 
     }
