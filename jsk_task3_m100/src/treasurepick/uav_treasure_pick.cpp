@@ -228,10 +228,7 @@ public:
           }
         else if(uav_task_state==Searching)
           {
-            float Kp = 0.1;
-            float searchspeed = 1.0;
-            nh_.setParam("Uav_max_velocity",searchspeed);
-            nh_.setParam("Kp",Kp);
+
            /*here we need to check the if the search aim_pose
             is very close to the odom, we need to randomly generate
             anther search pose
@@ -272,11 +269,6 @@ public:
 //                aim_pose = search_pose;
 //              }
 
-
-            float Kp = 0.1;
-            float maxspeed = 1.0;
-            nh_.setParam("Uav_max_velocity",maxspeed);
-            nh_.setParam("Kp",Kp);
             aim_pose_pub_.publish(aim_pose);
 
 //	    DJI_M100->local_position_control(aim_pose.position.x,aim_pose.position.y,aim_z,0);
