@@ -1,7 +1,9 @@
 <!-- -*- mode: xml -*- -->
 <launch>
-  <arg name="REMOTE_IP" default="192.168.97.188"/>
+  <arg name="REMOTE_IP" default="192.168.97.187"/>
   <arg name="LOCAL_IP" default="192.168.97.200"/>
+  <arg name="BROADCAST_IP" default="192.168.97.255"/>
+  <arg name="BROADCAST_PORT" default="1111"/>
   <arg name="IMAGE_PORT" default="1118"/>
   <arg name="JOY_PORT" default="1119"/>
   <arg name="raw_image" default="/image_zenmus" />
@@ -16,7 +18,6 @@
         send_rate: 25
         to_ip: "$(arg REMOTE_IP)"
       </rosparam>
-
     </node>
     <node pkg="jsk_network_tools" type="silverhammer_highspeed_receiver.py"
           name="joy_receiver">
@@ -27,7 +28,28 @@
         event_driven: true
       </rosparam>
     </node>
+    <!-- BROADCAST -->
+    <node pkg="jsk_network_tools" type="silverhammer_highspeed_streamer.py"
+          name="boardcast_streamer">
+      <rosparam subst_value="true">
+        message: jsk_network_tools/AgentStatus
+        to_port: $(arg BROADCAST_PORT)
+        send_rate: 2
+        to_ip: "$(arg BROADCAST_IP)"
+      </rosparam>
+    </node>
+    <node pkg="jsk_network_tools" type="silverhammer_highspeed_receiver.py"
+          name="boardcast_receiver">
+      <rosparam subst_value="true">
+        message: jsk_network_tools/AgentStatus
+        receive_port: $(arg BROADCAST_PORT)
+        receive_ip: "$(arg BROADCAST_IP)"
+        event_driven: true
+      </rosparam>
+    </node>
+
   </group>
+
 
   <node name="republish" type="republish" pkg="image_transport" output="screen" args="raw in:=$(arg raw_image) compressed out:=/image_zenmus">
     <remap from="/image_zenmus/compressed" to="/image_zenmus_c" />

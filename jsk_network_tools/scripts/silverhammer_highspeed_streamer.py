@@ -42,6 +42,9 @@ class SilverHammerStreamer:
         self.send_num = 0
         self.rate = rospy.get_param("~send_rate", 2)   #2Hz
         self.socket_client = socket(AF_INET, SOCK_DGRAM)
+        ##enable broadcast....
+        self.socket_client.setsockopt(SOL_SOCKET,SO_REUSEADDR,1)
+        self.socket_client.setsockopt(SOL_SOCKET,SO_BROADCAST,1)
         self.packet_size = rospy.get_param("~packet_size", 1400) # for MTU:=1500
         subscriber_info = subscribersFromMessage(self.message_class())
         self.messages = {}

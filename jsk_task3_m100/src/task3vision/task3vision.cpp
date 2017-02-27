@@ -54,6 +54,7 @@ private:
     message_filters::Subscriber<sensor_msgs::CameraInfo> *camera_info_sub_;
     message_filters::Subscriber<nav_msgs::Odometry> *uav_odom_sub_;
     ros::NodeHandle nh_;
+    ros::NodeHandle *priv_nh; //private
     message_filters::Synchronizer<MySyncPolicy> *sync;
     tf::Transform BaseToCamera;
     geometry_msgs::PoseArray object_clusteres;
@@ -102,8 +103,13 @@ private:
 public:
     void Init()
     {
-        img_sub_  = new message_filters::Subscriber<sensor_msgs::Image>(nh_,"/image_zenmus",1);
-        camera_info_sub_ = new message_filters::Subscriber<sensor_msgs::CameraInfo>(nh_,"/dji_sdk/camera_info", 1);
+        priv_nh = new ros::NodeHandle("~");
+        std::string image_topic, cam_info_topic;
+        priv_nh->param("image_topic", image_topic, std::string("/image_zenmus"));
+        priv_nh->param("cam_info_topic", cam_info_topic, std::string("/dji_sdk/camera_info"));
+
+        img_sub_  = new message_filters::Subscriber<sensor_msgs::Image>(nh_,image_topic,1);
+        camera_info_sub_ = new message_filters::Subscriber<sensor_msgs::CameraInfo>(nh_,cam_info_topic, 1);
         uav_odom_sub_ = new message_filters::Subscriber<nav_msgs::Odometry>(nh_,"/dji_sdk/odometry",1);
         lidar_sub_ = nh_.subscribe<std_msgs::Int16>("/serial_board/lidar_laser",1,&task3_vision::LidarCallback,this);
         guidance_sub_ = nh_.subscribe<sensor_msgs::LaserScan>("/guidance/ultrasonic",1,&task3_vision::GuidanceCallback,this);
@@ -167,6 +173,7 @@ public:
                               const nav_msgs::OdometryConstPtr& odom, double uav_h);
 
     // class's family...
+     //task3_vision(const ros::NodeHandle &nh = ros::NodeHandle(), const ros::NodeHandle &priv_nh = ros::NodeHandle("~"))
     ~task3_vision()
     {    }
 };

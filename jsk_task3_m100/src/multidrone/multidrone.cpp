@@ -30,13 +30,12 @@ private:
 public:
     void init()
     {
-        origin_lati = 35.89396184 * PI/180;
-        origin_longi = 139.944021504 * PI/180;
+        //origin_lati = 35.89396184 * PI/180;
+        //origin_longi = 139.944021504 * PI/180;
         n_ = new ros::NodeHandle("~");
-        n_->getParam("origin_latitude", origin_lati);
-        n_->getParam("origin_longitude", origin_longi);
+        n_->param("origin_latitude",  origin_lati, 35.89396184 * PI/180);
+        n_->param("origin_longitude",  origin_longi, 139.944021504 * PI/180);
         gps_sub_ = n_->subscribe<dji_sdk::GlobalPosition>("/dji_sdk/global_position", 1 ,&Multidrone::GpsCallback,this);
-
 
     }
 
