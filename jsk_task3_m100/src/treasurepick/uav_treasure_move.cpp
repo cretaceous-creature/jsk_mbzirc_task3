@@ -157,12 +157,12 @@ public:
        // vel_world_uav = obj_vel;  //send the local velocity of object
 
 
-        vel_cmd_uav.linear.x += Kp * aim_local_pose.position.x - Kd * d_diff_twist.linear.x
-                + Ki*2 * i_diff_twist.linear.x;
-        vel_cmd_uav.linear.y += Kp * aim_local_pose.position.y - Kd * d_diff_twist.linear.y
-                + Ki*2 * i_diff_twist.linear.y;
-        vel_cmd_uav.linear.z += Kp * aim_local_pose.position.z- Kd * d_diff_twist.linear.z
-                + Ki * i_diff_twist.linear.z;
+        vel_cmd_uav.linear.x = Kp * aim_local_pose.position.x - Kd * d_diff_twist.linear.x;
+	//   + Ki*2 * i_diff_twist.linear.x;
+        vel_cmd_uav.linear.y = Kp * aim_local_pose.position.y - Kd * d_diff_twist.linear.y;
+	//   + Ki*2 * i_diff_twist.linear.y;
+        vel_cmd_uav.linear.z = Kp * aim_local_pose.position.z- Kd * d_diff_twist.linear.z;
+	//    + Ki * i_diff_twist.linear.z;
 
         //el_world_uav.linear.z = 0;
 
@@ -173,10 +173,16 @@ public:
         vel_cmd_uav.linear.x = vel_cmd_uav.linear.x<-MAXSPEED?-MAXSPEED:vel_cmd_uav.linear.x;
         vel_cmd_uav.linear.y = vel_cmd_uav.linear.y<-MAXSPEED?-MAXSPEED:vel_cmd_uav.linear.y;
         vel_cmd_uav.linear.z = vel_cmd_uav.linear.z<-3.0?-3.0:vel_cmd_uav.linear.z;
-
-	        DJI_M100->velocity_control(0,vel_cmd_uav.linear.x,-vel_cmd_uav.linear.y,vel_cmd_uav.linear.z,0);
+	double z_velo; 
+        if(uav_h > 1.3)
+	  z_velo = -0.5;
+	else if(uav_h >1.1)
+	  z_velo = -0.1;
+	else
+	  z_velo= 0;
+	        DJI_M100->velocity_control(0,vel_cmd_uav.linear.x,-vel_cmd_uav.linear.y,z_velo,0);
         std::cout<<"the velocity is :"<< vel_cmd_uav.linear.x << "," << -vel_cmd_uav.linear.y << ","<<
-                   vel_cmd_uav.linear.z << std::endl;
+                   z_velo << std::endl;
 
     }
 
