@@ -240,8 +240,16 @@ void TeleopUAVJoy::JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
         cmd.linear.x = max_vel*joy->axes[PS3_AXIS_STICK_RIGHT_UPWARDS];
         cmd.linear.y = -(max_vel*joy->axes[PS3_AXIS_STICK_RIGHT_LEFTWARDS]);
         cmd.linear.z = vertical_vel*joy->axes[PS3_AXIS_STICK_LEFT_UPWARDS];
-        cmd.angular.z = -100*max_yawrate*joy->axes[PS3_AXIS_STICK_LEFT_LEFTWARDS];
-        DJI_M100->velocity_control(0,cmd.linear.x,cmd.linear.y,cmd.linear.z,cmd.angular.z);
+	//        cmd.angular.z = -100*max_yawrate*joy->axes[PS3_AXIS_STICK_LEFT_LEFTWARDS];
+	if(joy->buttons[PS3_AXIS_BUTTON_ACTION_CROSS])
+	   cmd.angular.z = -100*max_yawrate*joy->axes[PS3_AXIS_STICK_LEFT_LEFTWARDS];
+	   //velocity control
+       	DJI_M100->velocity_control(0,cmd.linear.x,cmd.linear.y,cmd.linear.z,cmd.angular.z);
+	   //attitude control
+	float roll = cmd.linear.y * 20;
+        float pitch = cmd.linear.x * 20;
+	   //if 1A control the velocity 2A control throttle
+	//DJI_M100->attitude_control(0x1A, roll, pitch, (float)cmd.linear.z, (float)cmd.angular.z);
 	// ROS_INFO("linear and angular z is %f, %f",cmd.linear.z,cmd.angular.z);
     }
 

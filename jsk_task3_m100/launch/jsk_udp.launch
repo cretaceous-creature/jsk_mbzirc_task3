@@ -1,6 +1,6 @@
 <!-- -*- mode: xml -*- -->
 <launch>
-  <arg name="REMOTE_IP" default="192.168.97.187"/>
+  <arg name="REMOTE_IP" default="192.168.97.188"/>
   <arg name="LOCAL_IP" default="192.168.97.200"/>
   <arg name="BROADCAST_IP" default="192.168.97.255"/>
   <arg name="BROADCAST_PORT" default="1111"/>
