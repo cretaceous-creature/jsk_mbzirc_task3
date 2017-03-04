@@ -87,7 +87,7 @@ public:
         //data init
         cmd.linear.x = cmd.linear.y = cmd.angular.z = 0;
         stampcounter =0;
-        v_rc_checker = 0;
+	v_rc_checker = 0;
         v_rc[0] = 1024; // roll    +- 660
         v_rc[1] = 1024; // pitch
         v_rc[2] = 1024; // throttle
@@ -95,10 +95,10 @@ public:
         v_rc[4] = 1324; // gear
         v_rc[6] = 496;  // mode {1552(P), 1024(A), 496(F)}
         //sub and srv
-        joy_sub_ = n_.subscribe<sensor_msgs::Joy>("/from_fc/joy",1,&TeleopUAVJoy::JoyCallback,this);
+        joy_sub_ = n_.subscribe<sensor_msgs::Joy>("/from_fc/joy",10,&TeleopUAVJoy::JoyCallback,this);
         mag_srv_ = n_.serviceClient<jsk_mbzirc_board::Magnet>("serial_board/magnet_control");
         ros::NodeHandle n_private("~");
-        n_private.param("walk_vel", walk_vel, 2.0);
+        n_private.param("walk_vel", walk_vel, 1.0);
         n_private.param("run_vel", run_vel, 4.0);
         n_private.param("yaw_rate", yaw_rate, 0.5);
         n_private.param("yaw_run_rate", yaw_rate_run, 1.0);
@@ -240,17 +240,9 @@ void TeleopUAVJoy::JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
         cmd.linear.x = max_vel*joy->axes[PS3_AXIS_STICK_RIGHT_UPWARDS];
         cmd.linear.y = -(max_vel*joy->axes[PS3_AXIS_STICK_RIGHT_LEFTWARDS]);
         cmd.linear.z = vertical_vel*joy->axes[PS3_AXIS_STICK_LEFT_UPWARDS];
-        //        cmd.angular.z = -100*max_yawrate*joy->axes[PS3_AXIS_STICK_LEFT_LEFTWARDS];
-        if(joy->buttons[PS3_AXIS_BUTTON_ACTION_CROSS])
-            cmd.angular.z = -100*max_yawrate*joy->axes[PS3_AXIS_STICK_LEFT_LEFTWARDS];
-        //velocity control
+        cmd.angular.z = -100*max_yawrate*joy->axes[PS3_AXIS_STICK_LEFT_LEFTWARDS];
         DJI_M100->velocity_control(0,cmd.linear.x,cmd.linear.y,cmd.linear.z,cmd.angular.z);
-        //attitude control
-        float roll = cmd.linear.y * 20;
-        float pitch = cmd.linear.x * 20;
-        //if 1A control the velocity 2A control throttle
-        //DJI_M100->attitude_control(0x1A, roll, pitch, (float)cmd.linear.z, (float)cmd.angular.z);
-        // ROS_INFO("linear and angular z is %f, %f",cmd.linear.z,cmd.angular.z);
+	// ROS_INFO("linear and angular z is %f, %f",cmd.linear.z,cmd.angular.z);
     }
 
     //Virtual_RC

@@ -1,13 +1,12 @@
 <!-- -*- mode: xml -*- -->
 <launch>
   <arg name="REMOTE_IP" default="192.168.97.188"/>
-  <arg name="LOCAL_IP" default="192.168.97.200"/>
+  <arg name="LOCAL_IP" default="192.168.97.31"/>
   <arg name="BROADCAST_IP" default="192.168.97.255"/>
   <arg name="BROADCAST_PORT" default="1111"/>
   <arg name="IMAGE_PORT" default="1118"/>
   <arg name="JOY_PORT" default="1119"/>
   <arg name="raw_image" default="/image_zenmus" />
-
   <group ns="silverhammer">
     <!-- FC to OCS -->
     <node pkg="jsk_network_tools" type="silverhammer_highspeed_streamer.py"
@@ -15,7 +14,7 @@
       <rosparam subst_value="true">
         message: jsk_network_tools/Remote_Image
         to_port: $(arg IMAGE_PORT)
-        send_rate: 25
+        send_rate: 15
         to_ip: "$(arg REMOTE_IP)"
       </rosparam>
     </node>
