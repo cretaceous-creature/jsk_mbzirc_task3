@@ -12,6 +12,7 @@
 #include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Int16.h>
+#include <std_msgs/Float32.h>
 #include <sensor_msgs/LaserScan.h>
 //sys lib
 #include <iostream>
@@ -57,7 +58,7 @@ private:
     geometry_msgs::Pose aim_pose;
     geometry_msgs::Pose box_pose;
     geometry_msgs::Pose search_pose;
-    std_msgs::Int16 magnet_state;// how many switches are on
+    std_msgs::Float32 magnet_state;// how many switches are on
     int switch_on_counter;
     //srv
     ros::ServiceClient mag_srv_;
@@ -86,7 +87,7 @@ public:
         object_pose_sub_ = nh_.subscribe("/obj_cluster/centroid_pose",
                                          1,&treasure_pick::ObjPoseCallback,this);
         uav_odom_sub_ = nh_.subscribe("/dji_sdk/odometry",10,&treasure_pick::OdomCallback,this);
-        mag_feedback_sub_ = nh_.subscribe("/serial_board/magnet_feedback",1,&treasure_pick::PickCallback,this);
+        mag_feedback_sub_ = nh_.subscribe("/magnet_feedback",1,&treasure_pick::PickCallback,this);
         aim_pose_pub_ = nh_.advertise<geometry_msgs::Pose>("aimpose",1);
         range_sensor_sub_ = nh_.subscribe("/guidance/ultrasonic", 1, &treasure_pick::RangeSensorCallback, this);
 	//srv
@@ -276,7 +277,7 @@ public:
           }
     }
 
-    void PickCallback(const std_msgs::Int16 pickstate)
+    void PickCallback(const std_msgs::Float32 pickstate)
     {
 
 

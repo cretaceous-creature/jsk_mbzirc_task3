@@ -31,6 +31,7 @@
 #include <tf/transform_listener.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Twist.h>
+#include <std_msgs/Float32.h>
 #include <std_msgs/Float64.h>
 #include <iostream>
 #include <std_msgs/Bool.h>
@@ -111,7 +112,7 @@ public:
         img_sub_  = new message_filters::Subscriber<sensor_msgs::Image>(nh_,image_topic,1);
         camera_info_sub_ = new message_filters::Subscriber<sensor_msgs::CameraInfo>(nh_,cam_info_topic, 1);
         uav_odom_sub_ = new message_filters::Subscriber<nav_msgs::Odometry>(nh_,"/dji_sdk/odometry",1);
-        lidar_sub_ = nh_.subscribe<std_msgs::Int16>("/serial_board/lidar_laser",1,&task3_vision::LidarCallback,this);
+        lidar_sub_ = nh_.subscribe<std_msgs::Float32>("/lidar_laser",1,&task3_vision::LidarCallback,this);
         guidance_sub_ = nh_.subscribe<sensor_msgs::LaserScan>("/guidance/ultrasonic",1,&task3_vision::GuidanceCallback,this);
         sync = new message_filters::Synchronizer<MySyncPolicy>(MySyncPolicy(10), *img_sub_, *camera_info_sub_, *uav_odom_sub_);
         sync->registerCallback(boost::bind(&task3_vision::ImageCallback,this,_1,_2,_3));
@@ -137,7 +138,7 @@ public:
         std::cout<<"initialization finished"<<std::endl;
 
     }
-    void LidarCallback(const std_msgs::Int16 data)
+    void LidarCallback(const std_msgs::Float32 data)
     {
         lidar_data = (float)data.data;
         lidar_data /= 100; //from cm to meter
@@ -608,7 +609,7 @@ void task3_vision::ImageCallback(const sensor_msgs::ImageConstPtr& img,
 
         //timer end
         duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-        std::cout<<"process_time is "<< duration << " second" <<'\n';
+        //std::cout<<"process_time is "<< duration << " second" <<'\n';
 
         cv::waitKey(10);
     }

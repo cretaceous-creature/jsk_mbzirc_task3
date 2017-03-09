@@ -16,7 +16,7 @@
   <include file="$(find dji_sdk_read_cam)/launch/manifold_cam.launch" >
   </include>
     <node pkg="jsk_task3_m100" type="uav_teleop_joy" name="uav_teleop_joy"
-          launch-prefix="xterm -e">
+          launch-prefix="xterm -e" >
     </node>
   </group
 >  <!-- gimbal control, always facing down -->

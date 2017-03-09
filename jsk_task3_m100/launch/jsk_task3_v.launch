@@ -2,7 +2,7 @@
 <launch>
   <arg name="paused" default="false"/>
   <arg name="debug" default="false"/>
-  <arg name="vision" default="false"/>
+  <arg name="vision" default="true"/>
   <arg name="motion" default="false"/>
   <arg name="LOCAL_IP" default="192.168.97.31"/> <!-- UAV -->
   <arg name="REMOTE_IP" default="192.168.97.188"/> <!-- Remote PC -->
