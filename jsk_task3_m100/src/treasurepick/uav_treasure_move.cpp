@@ -156,6 +156,9 @@ public:
         //PID control the diff
        // vel_world_uav = obj_vel;  //send the local velocity of object
 
+        // let Kp be bigger when the offset is small
+        if(uav_h<1.5)
+            Kp *= 2.5 - uav_h;   //1 - 2.5 times....
 
         vel_cmd_uav.linear.x = Kp * aim_local_pose.position.x - Kd * d_diff_twist.linear.x;
 	//   + Ki*2 * i_diff_twist.linear.x;

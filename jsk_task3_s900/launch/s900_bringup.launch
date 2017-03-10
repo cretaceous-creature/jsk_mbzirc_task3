@@ -6,7 +6,8 @@
   <!-- Base Platform -->
   <include file="$(find jsk_mbzirc_task1_common)/launch/uav_bringup.launch" >
     <arg name="frame_rate" value="20" />
-    <arg name="dji_version" default="A3_31" />
+    <arg name="dji_version" default="A3_32" />
+    <!-- arg name="dji_port" default="/dev/ttyTHS1" -->
     <arg name="dji_port" default="/dev/ttyUSB0" />
   </include>
 
