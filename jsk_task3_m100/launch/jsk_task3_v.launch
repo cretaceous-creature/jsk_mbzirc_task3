@@ -13,8 +13,8 @@
   <arg name="origin_longi" default="54.7564013"/> <!-- Remote PC -->
    <!-- drone number -->
   <arg name="drone_number" value="1.0"/>
-
-
+  <arg name="image_topic" default="/image_zenmus"/>
+  <arg name="cam_info_topic" default="/dji_sdk/camera_info"/>
  <!-- DJI SDK -->
   <include file="$(find jsk_task3_m100)/launch/jsk_udp.launch" >
 	 <arg name="LOCAL_IP" value="$(arg LOCAL_IP)"/>
@@ -33,6 +33,10 @@
        <!-- task3 vision node -->
   <group if="$(arg vision)">
         <node pkg="jsk_task3_m100" type="task3_vision" name="task3_vision">
+	  <rosparam subst_value="true">
+            image_topic: $(arg image_topic)
+            cam_info_topic: $(arg cam_info_topic)
+	  </rosparam>
     </node>
   </group>
        <!-- multidrone  node -->
