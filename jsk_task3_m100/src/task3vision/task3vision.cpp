@@ -224,7 +224,7 @@ cv::Mat task3_vision::Projection_matrix(const sensor_msgs::CameraInfoConstPtr& c
     a[2] = P_Mat_G.at<double>(0, 2);
     a[3] = P_Mat_G.at<double>(0, 3);
     b[0] = P_Mat_G.at<double>(1, 0);
-    b[1] = P_Mat_G.at<double>(1, 1);p
+    b[1] = P_Mat_G.at<double>(1, 1);
     b[2] = P_Mat_G.at<double>(1, 2);
     b[3] = P_Mat_G.at<double>(1, 3);
     c[0] = P_Mat_G.at<double>(2, 0);
