@@ -35,19 +35,19 @@ private:
 public:
     void init()
     {
-        double lati_rc = 24.643803;
-        double longi_rc = 54.7564013;
-
         n_ = new ros::NodeHandle("~");
-        n_->param("origin_latitude",  origin_lati, 24.643803 * PI/180);
-        n_->param("origin_longitude",  origin_longi, 54.7564013 * PI/180);
+        n_->param("origin_latitude",  origin_lati, 24.643803);
+        n_->param("origin_longitude",  origin_longi, 54.7564013);
         n_->param("drone_number",  drone_num, 1.0);  //1 for m100,
         gps_sub_ = n_->subscribe<dji_sdk::GlobalPosition>("/dji_sdk/global_position", 1 ,&Multidrone::GpsCallback,this);
+
+        ROS_WARN("lati:%f longi:%f", origin_lati, origin_longi);
+        origin_lati *= PI/180;
+        origin_longi *= PI/180;
 
         //publisher
         std::string topic = n_->resolveName("/share_odometry");
         share_odom_pub_ = n_->advertise<nav_msgs::Odometry>(topic,1);
-
     }
 
     void GpsCallback(dji_sdk::GlobalPosition gps_data)
