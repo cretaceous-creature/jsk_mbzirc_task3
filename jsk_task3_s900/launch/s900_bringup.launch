@@ -1,17 +1,13 @@
 <!-- -*- mode: xml -*- -->
 <launch>
-  <arg name="LOCAL_IP" default="192.168.97.10"/> <!-- UAV -->
-  <arg name="REMOTE_IP" default="192.168.97.102"/> <!-- Remote PC -->
+  <arg name="LOCAL_IP" default="192.168.97.32"/> <!-- UAV -->
+  <arg name="REMOTE_IP" default="192.168.97.177"/> <!-- Remote PC -->
 
   <!-- Base Platform -->
-  <include file="$(find jsk_mbzirc_task1_common)/launch/m100_bringup.launch" >
-    <arg name="use_fisheye" value="true" />
-    <arg name="use_guidance" value="false" />
-  </include>
-
-  <!-- Magnet -->
-  <include file="$(find jsk_mbzirc_board)/launch/magnet.launch">
-    <arg name="verbose" value="false" />
+  <include file="$(find jsk_mbzirc_task1_common)/launch/uav_bringup.launch" >
+    <arg name="frame_rate" value="20" />
+    <arg name="dji_version" default="A32_31" />
+    <arg name="dji_port" default="/dev/ttyTHS1" />
   </include>
 
   <!-- Joy Teleop -->
@@ -20,10 +16,13 @@
   </node>
 
   <!-- Communication -->
-  <include file="$(find jsk_task3_m100)/launch/jsk_udp.launch" >
+  <include file="$(find jsk_task3_m100)/launch/jsk_task3_v.launch" >
     <arg name="LOCAL_IP" value="$(arg LOCAL_IP)"/>
     <arg name="REMOTE_IP" value="$(arg REMOTE_IP)"/>
-    <arg name="raw_image" value="/camera/image_rect"/>
+    <arg name="gimbal" value="false"/>
+    <arg name="vision" value="true"/>
+    <arg name="image_topic" value="/camera/image_rect"/>
+    <arg name="cam_info_topic" value="/camera/fisheye_gimbal/camera_info"/>
   </include>
 </launch>
 

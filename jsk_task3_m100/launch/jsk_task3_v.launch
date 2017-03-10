@@ -1,0 +1,61 @@
+<!-- -*- mode: xml -*- -->
+<launch>
+  <arg name="paused" default="false"/>
+  <arg name="debug" default="false"/>
+  <arg name="vision" default="true"/>
+  <arg name="gimbal" default="true"/>
+  <arg name="multidrone" default="true"/>
+  <arg name="motion" default="false"/>
+  <arg name="LOCAL_IP" default="192.168.97.31"/> <!-- UAV -->
+  <arg name="REMOTE_IP" default="192.168.97.188"/> <!-- Remote PC -->
+   <!-- lati and longi for the box -->
+  <arg name="origin_lati" default="24.643803"/> <!-- UAV -->
+  <arg name="origin_longi" default="54.7564013"/> <!-- Remote PC -->
+   <!-- drone number -->
+  <arg name="drone_number" value="1.0"/>
+  <arg name="image_topic" default="/image_zenmus"/>
+  <arg name="cam_info_topic" default="/dji_sdk/camera_info"/>
+ <!-- DJI SDK -->
+  <include file="$(find jsk_task3_m100)/launch/jsk_udp.launch" >
+	 <arg name="LOCAL_IP" value="$(arg LOCAL_IP)"/>
+	 <arg name="REMOTE_IP" value="$(arg REMOTE_IP)"/>
+  </include>
+ <!-- Magnet -->
+  <include file="$(find jsk_mbzirc_board)/launch/magnet.launch">
+      <arg name="verbose" value="false" />
+  </include>
+
+  <group if="$(arg gimbal)">
+       <!-- gimbal control, always facing down -->
+        <node pkg="jsk_task3_m100" type="gimbal_control" name="gimbal_control">
+    </node>
+  </group>
+       <!-- task3 vision node -->
+  <group if="$(arg vision)">
+        <node pkg="jsk_task3_m100" type="task3_vision" name="task3_vision">
+	  <rosparam subst_value="true">
+            image_topic: $(arg image_topic)
+            cam_info_topic: $(arg cam_info_topic)
+	  </rosparam>
+    </node>
+  </group>
+       <!-- multidrone  node -->
+  <group if="$(arg multidrone)">
+        <node pkg="jsk_task3_m100" type="multidrone" name="multidrone">
+      <rosparam subst_value="true">
+        drone_number: $(arg drone_number)
+        origin_lati: $(arg origin_lati)
+        origin_longi: $(arg origin_longi)
+      </rosparam>
+    </node>
+  </group>
+
+  <group if="$(arg motion)">
+       <!-- uav_treasure_pick -->
+    <node pkg="jsk_task3_m100" type="uav_treasure_pick" name="uav_treasure_pick">
+    </node>
+       <!-- uav_treasure_move -->
+    <node pkg="jsk_task3_m100" type="uav_treasure_move" name="uav_treasure_move">
+    </node>
+  </group>
+</launch>

@@ -30,11 +30,11 @@ class Serial_board:
         #magnets service server
         self._srv_magnet = rospy.Service("/serial_board/magnet_control", Magnet, self.__Magnet_Service)
         #magnets switch publisher
-        self._pub_magnet = rospy.Publisher("magnet_feedback", Float32, queue_size = 1)
+        self._pub_magnet = rospy.Publisher("magnet_feedback", Int16, queue_size = 1)
         #laser distance publisher
-        self._pub_pointlaser = rospy.Publisher("point_laser", Float32, queue_size = 1)
+        self._pub_pointlaser = rospy.Publisher("point_laser", Int16, queue_size = 1)
         #lidar distance publisher
-        self._pub_lidarlaser = rospy.Publisher("lidar_laser", Float32, queue_size = 1)
+        self._pub_lidarlaser = rospy.Publisher("lidar_laser", Int16, queue_size = 1)
 
 
     #delete function
@@ -72,19 +72,19 @@ class Serial_board:
                 index = data_in.find(self.Magdata)
                 if not (index < 0):
                     index +=5
-                    self._pub_magnet.publish(float(data_in[index:data_in.find('!',index)]))
+                    self._pub_magnet.publish(int(data_in[index:data_in.find('!',index)]))
                     #now get the distance
                     index = data_in.find('!#')
                     index +=2
                     distbyte = data_in[index:data_in.find('#',index)]
                     if distbyte:
-                        self._pub_pointlaser.publish(float(distbyte.strip('\0'))/10)
+                        self._pub_pointlaser.publish(int(distbyte.strip('\0')))
                     #next get the lidar data
                     index = data_in.find('#$')
                     index +=2
                     lidar_data = data_in[index:data_in.find('$',index)]
                     if lidar_data:
-                        self._pub_lidarlaser.publish(float(lidar_data.strip('\0')))
+                        self._pub_lidarlaser.publish(int(lidar_data.strip('\0')))
                             
             r.sleep()
 

@@ -18,7 +18,7 @@ DEPENDENCIES
 sensor_msgs
 std_msgs)
 #add gpu support
-set(ENABLE_CUDA OFF)
+set(ENABLE_CUDA ON)
 find_package(OpenMP)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
@@ -31,18 +31,23 @@ set(CUDA_INCLUDE_DIRS "/usr/local/cuda/")
 include_directories(${CUDA_INCLUDE_DIRS})
 #add gpu support for uav_img2pointcloud node
 add_definitions(-DGPU_EN)
-cuda_add_library(UAV_IMG2POINTCLOUD_CU_LIB ${LIB_TYPE} src/img2pointcloud/uav_img2pointcloud.cu)
-add_executable(uav_img2pointcloud src/img2pointcloud/uav_img2pointcloud.cpp)
-add_dependencies(uav_img2pointcloud UAV_IMG2POINTCLOUD_CU_LIB)
-target_link_libraries(uav_img2pointcloud ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${CUDA_LIBRARIES} UAV_IMG2POINTCLOUD_CU_LIB)
-else()
+#cuda_add_library(UAV_IMG2POINTCLOUD_CU_LIB ${LIB_TYPE} src/img2pointcloud/uav_img2pointcloud.cu)
 #add_executable(uav_img2pointcloud src/img2pointcloud/uav_img2pointcloud.cpp)
-#target_link_libraries(uav_img2pointcloud ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+#add_dependencies(uav_img2pointcloud UAV_IMG2POINTCLOUD_CU_LIB)
+#target_link_libraries(uav_img2pointcloud ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${CUDA_LIBRARIES} UAV_IMG2POINTCLOUD_CU_LIB)
+
+#task3 vision node
+add_executable(task3_vision src/task3vision/task3vision.cpp)
+target_link_libraries(task3_vision ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${CUDA_LIBRARIES})
+else()
 #task3 vision node
 add_executable(task3_vision src/task3vision/task3vision.cpp)
 target_link_libraries(task3_vision ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 endif(ENABLE_CUDA)
+#uav_img2pointcloud projection node
+#add_executable(uav_img2pointcloud src/img2pointcloud/uav_img2pointcloud.cpp)
+#target_link_libraries(uav_img2pointcloud ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #uav_teleop_keyboard node
 add_executable(uav_teleop_keyboard src/teleop/uav_teleop_keyboard.cpp)
 target_link_libraries(uav_teleop_keyboard ${catkin_LIBRARIES})
@@ -56,17 +61,23 @@ target_link_libraries(gimbal_control ${catkin_LIBRARIES})
 add_executable(uav_treasure_pick src/treasurepick/uav_treasure_pick.cpp)
 target_link_libraries(uav_treasure_pick ${catkin_LIBRARIES})
 #uav_treasure_move node
-#add_executable(uav_treasure_move src/treasurepick/uav_treasure_move.cpp)
-#target_link_libraries(uav_treasure_move ${catkin_LIBRARIES})
+add_executable(uav_treasure_move src/treasurepick/uav_treasure_move.cpp)
+target_link_libraries(uav_treasure_move ${catkin_LIBRARIES})
+
+#uav_treasure_move node
+add_executable(multidrone src/multidrone/multidrone.cpp)
+target_link_libraries(multidrone ${catkin_LIBRARIES})
 ######################
 ## CFG Generation ##
 ######################
 generate_dynamic_reconfigure_options(
 cfg/Filterparam.cfg
+cfg/Controlparam.cfg
 #...
 )
 # make sure configure headers are built before any node using them
 add_dependencies(task3_vision ${PROJECT_NAME}_gencfg)
+add_dependencies(uav_treasure_move ${PROJECT_NAME}_gencfg)
 ###################################
 ## catkin specific configuration ##
 ###################################

@@ -4,6 +4,7 @@
   <arg name="debug" default="false"/>
   <arg name="imagerbg" default="1"/>
   <arg name="teleop" default="true"/>
+  <arg name="guidance" default="true"/>
 
  <!-- DJI SDK -->
   <include file="$(find dji_sdk)/launch/sdk_manifold.launch" >
@@ -15,13 +16,13 @@
   <include file="$(find dji_sdk_read_cam)/launch/manifold_cam.launch" >
   </include>
     <node pkg="jsk_task3_m100" type="uav_teleop_joy" name="uav_teleop_joy"
-          launch-prefix="xterm -e">
+           launch-prefix="xterm -e" >
     </node>
-  </group>
+  </group> 
 
-  <group unless="$(arg teleop)">
-    <node pkg="jsk_task3_m100" type="gimbal_control" name="gimbal_control"
-          launch-prefix="xterm -e">
+  <!-- guidance -->
+  <group if="$(arg guidance)">
+    <node pkg="guidance" type="guidanceNode" name="guidanceNode">
     </node>
   </group>
 

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(jsk_network_tools)
 
 find_package(catkin REQUIRED COMPONENTS
-  message_generation std_msgs sensor_msgs rostest
+  message_generation std_msgs sensor_msgs nav_msgs rostest
   dynamic_reconfigure roscpp)
 catkin_python_setup()
 add_message_files(
@@ -20,6 +20,7 @@ add_message_files(
   WifiStatus.msg
   Remote_Image.msg
   Remote_Joy.msg
+  AgentStatus.msg
 )
 add_service_files(
   FILES
@@ -31,7 +32,7 @@ generate_dynamic_reconfigure_options(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  std_msgs sensor_msgs dynamic_reconfigure
+  std_msgs sensor_msgs nav_msgs dynamic_reconfigure
 )
 catkin_package(
   DEPENDS
