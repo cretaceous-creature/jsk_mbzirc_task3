@@ -176,7 +176,7 @@ public:
 	double z_velo; 
         if(uav_h > 1.3)
 	  z_velo = -0.5;
-	else if(uav_h >1.1)
+	else if(uav_h >0.5)
 	  z_velo = -0.1;
 	else
 	  z_velo= 0;
