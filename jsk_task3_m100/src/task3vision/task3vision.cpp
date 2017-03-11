@@ -376,7 +376,7 @@ void task3_vision::ImageCallback(const sensor_msgs::ImageConstPtr& img,
 {
     double uav_h;
     if(odom->pose.pose.position.z<1&&us_data.ranges.size()&&us_data.ranges.at(0)>0.05) //less than 1 meter
-        uav_h = us_data.ranges.at(0);
+        uav_h = us_data.ranges.at(0) - 0.05;
     else if(odom->pose.pose.position.z<1&&lidar_data>0&&lidar_data<2) //less than 1 meter
         uav_h = lidar_data;
     else

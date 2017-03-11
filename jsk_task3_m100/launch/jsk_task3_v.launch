@@ -47,8 +47,8 @@
         <node pkg="jsk_task3_m100" type="multidrone" name="multidrone">
       <rosparam subst_value="true">
         drone_number: $(arg drone_number)
-        origin_latitude: 24.643701
-        origin_longitude: 54.756211
+        origin_latitude: 24.644168
+        origin_longitude: 54.755807
       </rosparam>
     </node>
   </group>

@@ -50,7 +50,11 @@ private:
     ros::Subscriber object_pose_sub_;
     ros::Subscriber uav_odom_sub_;
     ros::Subscriber mag_feedback_sub_;
-    ros::Subscriber range_sensor_sub_;
+    ros::Subscriber guidance_sub_;
+    sensor_msgs::LaserScan ultra_sonic;
+    ros::Subscriber lidar_sub_;
+    float lidar_data;
+    ros::Subscriber share_odom_sub_;  //self global position
     //publisher
     ros::Publisher aim_pose_pub_;
     ros::Publisher mag_pub_;
@@ -66,6 +70,7 @@ private:
 
     std_msgs::Int16 mag_on;
     nav_msgs::Odometry uav_odom;
+    nav_msgs::Odometry global_odom;
     std::vector<Treasure> treasure_vec;
 
     const double distthreshold = 1; //here we assume that no object is near with 1 meter
@@ -76,8 +81,13 @@ private:
     
     double vel_nav_gain_;
     double vel_nav_limit_;
-    double range_sensor_value_;
-    bool range_sensor_update_;
+
+    //dirty flag....
+    int attemp_to_back = 0;
+    int attemp_time = 0;
+    int canseecounter = 0;
+
+
 public:
     void init()
     {
@@ -86,10 +96,13 @@ public:
        //subscriber
         object_pose_sub_ = nh_.subscribe("/obj_cluster/centroid_pose",
                                          1,&treasure_pick::ObjPoseCallback,this);
-        uav_odom_sub_ = nh_.subscribe("/dji_sdk/odometry",10,&treasure_pick::OdomCallback,this);
+        uav_odom_sub_ = nh_.subscribe("/dji_sdk/odometry",1,&treasure_pick::OdomCallback,this);
         mag_feedback_sub_ = nh_.subscribe("/magnet_feedback",1,&treasure_pick::PickCallback,this);
         aim_pose_pub_ = nh_.advertise<geometry_msgs::Pose>("aimpose",1);
-        range_sensor_sub_ = nh_.subscribe("/guidance/ultrasonic", 1, &treasure_pick::RangeSensorCallback, this);
+        guidance_sub_ = nh_.subscribe("/guidance/ultrasonic", 1, &treasure_pick::UltraSonicCallback, this);
+        lidar_sub_ = nh_.subscribe<std_msgs::Float32>("/lidar_laser",1,&treasure_pick::LidarCallback,this);
+        //
+        share_odom_sub_ = nh_.subscribe("/share_odometry",10,&treasure_pick::ShareOdomCallback,this);
 	//srv
         mag_srv_ = nh_.serviceClient<jsk_mbzirc_board::Magnet>("serial_board/magnet_control");
         mag_srv_status.request.on = false;
@@ -107,7 +120,6 @@ public:
 
 	vel_nav_limit_ = 0.4;
 	vel_nav_gain_ = 1.0;
-	range_sensor_update_ = false;	
     }
     inline bool DistLessThanThre(geometry_msgs::Point P1, geometry_msgs::Point P2, double threshold)
     {
@@ -196,9 +208,28 @@ public:
             }
         }
     }
+    /***********
+     * global call back
+     * *********/
+   void ShareOdomCallback(const nav_msgs::Odometry odom)
+   {
+       global_odom = odom;
+   }
+    /***********
+     * odometry call back
+     * *********/
     void OdomCallback(const nav_msgs::Odometry odom)
     {
-	if (!range_sensor_update_) return;
+        double uav_h;
+        if(odom.pose.pose.position.z<1.5&&ultra_sonic.ranges.size()&&ultra_sonic.ranges.at(0)>0.05) //less than 1 meter
+            uav_h = ultra_sonic.ranges.at(0) - 0.05 ;
+        else if(odom.pose.pose.position.z<1&&lidar_data>0&&lidar_data<2) //less than 1 meter
+            uav_h = lidar_data;
+        else
+	  uav_h = odom.pose.pose.position.z;
+	//test guidance sucks...
+	//	uav_h = odom.pose.pose.position.z;
+
         uav_odom = odom; //update
         //publish by status of the state machine
         //can be set to a fixed frequency..
@@ -207,16 +238,13 @@ public:
             aim_pose_pub_.publish(box_pose);
             //check if the location is near and then publish mag false
             //and the speed is very low
-            if((fabs(uav_odom.pose.pose.position.x-box_pose.position.x)<0.15)&&
-               (fabs(uav_odom.pose.pose.position.y-box_pose.position.y)<0.15)&&
-               (fabs(uav_odom.pose.pose.position.z-box_pose.position.z)<0.3)&&
-               (fabs(uav_odom.twist.twist.linear.x)<0.3)&&
-               (fabs(uav_odom.twist.twist.linear.y)<0.3)&&
-               (fabs(uav_odom.twist.twist.linear.z)<0.3))
+            if((fabs(global_odom.pose.pose.position.x-box_pose.position.x)<0.15)&&
+               (fabs(global_odom.pose.pose.position.y-box_pose.position.y)<0.15)&&
+               (fabs(global_odom.pose.pose.position.z-box_pose.position.z)<0.3))
               {
                 //here to release the magnets
                 if(mag_srv_.call(mag_srv_status))
-                    ROS_INFO("Gripper Released for 2000 ms");
+                    ROS_INFO("Gripper Released for 1000 ms");
                 else
                     ROS_INFO("Fail to release the gripper");
 
@@ -230,22 +258,19 @@ public:
         else if(uav_task_state==Searching)
           {
 
-           /*here we need to check the if the search aim_pose
-            is very close to the odom, we need to randomly generate
-            anther search pose
+           /*  now we need to using the global odom for searching...
+            * We record 16 GPS points for each UAV, each uav go from
+            * GPS point 1 - 16....   when it reaches the tempory one, go next..
+            *
            */
-            if((fabs(uav_odom.pose.pose.position.x-search_pose.position.x)<0.3)&&
-               (fabs(uav_odom.pose.pose.position.y-search_pose.position.y)<0.3)&&
-               (fabs(uav_odom.pose.pose.position.z-search_pose.position.z-0.2)<0.5)&&
-               (fabs(uav_odom.twist.twist.linear.x)<0.2)&&
-               (fabs(uav_odom.twist.twist.linear.y)<0.2)&&
-               (fabs(uav_odom.twist.twist.linear.z)<0.2))
+            if((fabs(global_odom.pose.pose.position.x-search_pose.position.x)<0.5)&&
+               (fabs(global_odom.pose.pose.position.y-search_pose.position.y)<0.5)&&
+               (fabs(global_odom.pose.pose.position.z-search_pose.position.z)<0.5))
               {
-                int randx = rand()%8;
-                int randy = rand()%8;
-                search_pose.position.x = randx-4;
-                search_pose.position.y = randy-4;
-                aim_pose = search_pose;
+               // update the searching pose from the recorded gps points.
+
+                             //TBD!!!!!!!!!!!!!!!!!!!!
+
                 ROS_WARN("Send random search place at: %f,%f,%f",
                          search_pose.position.x,
                          search_pose.position.y,
@@ -254,22 +279,60 @@ public:
               }
             //we have already set aim_pose to the search pose.
             //if the detector renew the aim_pose, we will pick...
+
+            aim_pose.orientation.w = 1; //this means to control global frame...
+            //transfer the global frame to the
+            aim_pose.position.x = search_pose.position.x - global_odom.pose.pose.position.x;
+            aim_pose.position.y = search_pose.position.y - global_odom.pose.pose.position.y;
+            aim_pose.position.z = 4; // search pose always to be 4 meters
             aim_pose_pub_.publish(aim_pose);
           }
         else
           {
             //picking
-            //consider pick failure
-//            if((fabs(uav_odom.pose.pose.position.x-aim_pose.position.x)<0.2)&&
-//               (fabs(uav_odom.pose.pose.position.y-aim_pose.position.y)<0.2)&&
-//               (fabs(uav_odom.pose.pose.position.z-aim_pose.position.z-0.2)<0.2)&&
-//               (fabs(uav_odom.twist.twist.linear.x)<0.05)&&
-//               (fabs(uav_odom.twist.twist.linear.y)<0.05)&&
-//               (fabs(uav_odom.twist.twist.linear.z)<0.05))
-//              {
-//                aim_pose = search_pose;
-//              }
+            //consider pick failure approach for ten times....
 
+            if(uav_h < 0.7)  //less than 0.8 meter, do pick attemp...
+                if(uav_h < 0.3)
+                {
+                    if(attemp_to_back == 2)
+                        attemp_time ++;
+                    attemp_to_back = 3;
+                    aim_pose.orientation.w = 3; // 3 means going back to 3 mete
+		    std::cout<<"now I am trying to hold back to 3 meters.."<<std::endl;
+                }
+                else
+                {
+                    attemp_to_back = 2;
+                    aim_pose.orientation.w = 2; // 2 means making pick attemp..
+		    std::cout<<"I am tring to pick"<<std::endl;
+                }
+
+            if(uav_h > 2)
+            {
+                canseecounter++;
+                attemp_to_back = 0; // above 2 meters then enable approach
+                if(canseecounter > 1000) //500 means ten seconds
+                    uav_task_state = Searching;
+            }
+            else
+            {
+                canseecounter = 0;
+            }
+
+            if(attemp_time > 10)
+            {
+
+               attemp_time++;
+               if(attemp_time > 100)  // let it go a little bit far away and try....
+               {
+                   attemp_time = 0;
+                   uav_task_state = Searching;
+		   std::cout<<"back to searching mode"<<std::endl;
+               }
+               aim_pose = search_pose;
+            }
+	    std::cout<<"the height is " << uav_h <<std::endl;
             aim_pose_pub_.publish(aim_pose);
 
 //	    DJI_M100->local_position_control(aim_pose.position.x,aim_pose.position.y,aim_z,0);
@@ -295,11 +358,17 @@ public:
         }
         magnet_state = pickstate;
     }
-	
-    void RangeSensorCallback(const sensor_msgs::LaserScanConstPtr& msg)
+    void LidarCallback(const std_msgs::Float32 data)
     {
-	range_sensor_update_ = true;
-	range_sensor_value_ = msg->ranges[0];	
+        lidar_data = (float)data.data;
+        lidar_data /= 100; //from cm to meter
+    }
+	
+    void UltraSonicCallback(const sensor_msgs::LaserScan data)
+    {
+        if(data.ranges.size())
+            if(data.ranges.at(0)<0.39 || data.ranges.at(0)>0.41)
+                ultra_sonic = data; //update ultra sonic...
     }
 
     ~treasure_pick()

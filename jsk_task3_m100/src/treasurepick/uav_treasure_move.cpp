@@ -10,6 +10,7 @@
 #include <geometry_msgs/PoseArray.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Twist.h>
+#include <std_msgs/Float32.h>
 #include <nav_msgs/Odometry.h>
 #include <tf/tf.h>
 #include <tf/transform_listener.h>
@@ -49,6 +50,8 @@ private:
     geometry_msgs::Pose aim_local_pose;
     geometry_msgs::PoseArray obj_centers_local;
     sensor_msgs::LaserScan ultra_sonic;
+    ros::Subscriber lidar_sub_;
+    float lidar_data;
     const float obj_plane_ = 0.2;//1 meter high
     //cmd_vel
     geometry_msgs::Twist obj_vel;
@@ -61,6 +64,7 @@ private:
     double Kp,Ki,Kd,MAXSPEED;
     // drone name
     DJIDrone* DJI_M100;
+    unsigned int control_counter = 0;
 
 public:
 
@@ -87,15 +91,21 @@ public:
         uav_odom_sub_ = nh_.subscribe("/dji_sdk/odometry",1,&uav_move::OdomCallback,this);
         obj_sub_local_ = nh_.subscribe("/obj_cluster/centroid_pose_local",1,&uav_move::ObjPoseLocalCallback,this);
         guidance_sub_ = nh_.subscribe("/guidance/ultrasonic", 1, &uav_move::UltraSonicCallback, this);
-
+        lidar_sub_ = nh_.subscribe<std_msgs::Float32>("/lidar_laser",1,&uav_move::LidarCallback,this);
         /*** dynamic reconfigure ***/
         f = boost::bind(&uav_move::DynamicReconfigureCallback, this, _1,_2);
         server.setCallback(f);
     }
-
+    void LidarCallback(const std_msgs::Float32 data)
+    {
+        lidar_data = (float)data.data;
+        lidar_data /= 100; //from cm to meter
+    }
     void UltraSonicCallback(const sensor_msgs::LaserScan data)
     {
-        ultra_sonic = data; //update ultra sonic...
+        if(data.ranges.size())
+            if(data.ranges.at(0)<0.39 || data.ranges.at(0)>0.41)
+                ultra_sonic = data; //update ultra sonic...
     }
 
     void ObjPoseLocalCallback(const geometry_msgs::PoseArray posearray)
@@ -147,46 +157,96 @@ public:
     void OdomCallback(const nav_msgs::OdometryConstPtr odom)
     {
         double uav_h;
-        if(odom->pose.pose.position.z<1&&ultra_sonic.ranges.size()&&ultra_sonic.ranges.at(0)>0.05) //less than 1 meter
-            uav_h = ultra_sonic.ranges.at(0);
+        if(odom->pose.pose.position.z<1.5&&ultra_sonic.ranges.size()&&ultra_sonic.ranges.at(0)>0.05) //less than 1 meter
+            uav_h = ultra_sonic.ranges.at(0) - 0.05 ;
+        else if(odom->pose.pose.position.z<1&&lidar_data>0&&lidar_data<2) //less than 1 meter
+            uav_h = lidar_data;
         else
             uav_h = odom->pose.pose.position.z;
+	//only use gps
+	//            uav_h = odom->pose.pose.position.z;
 
         uav_odom = *odom;
-        //PID control the diff
-       // vel_world_uav = obj_vel;  //send the local velocity of object
+        if(aim_pose.orientation.w == 1)
+        {
+            // searching status
+            std::cout<<"the drone is in searching status.."<<std::endl;
+            double unify = sqrt(aim_pose.position.x*aim_pose.position.x +
+                                aim_pose.position.y*aim_pose.position.y);
+            vel_cmd_uav.linear.x = aim_pose.position.x / unify;
+            vel_cmd_uav.linear.y = aim_pose.position.y / unify;
+            vel_cmd_uav.linear.z = aim_pose.position.z - uav_h;
 
-        // let Kp be bigger when the offset is small
-        if(uav_h<1.5)
-            Kp *= 2.5 - uav_h;   //1 - 2.5 times....
+            //control in global frame....
+	    //            DJI_M100->velocity_control(1,vel_cmd_uav.linear.x,vel_cmd_uav.linear.y,vel_cmd_uav.linear.z,0);
+            //we can comment this and check...
 
-        vel_cmd_uav.linear.x = Kp * aim_local_pose.position.x - Kd * d_diff_twist.linear.x;
-	//   + Ki*2 * i_diff_twist.linear.x;
-        vel_cmd_uav.linear.y = Kp * aim_local_pose.position.y - Kd * d_diff_twist.linear.y;
-	//   + Ki*2 * i_diff_twist.linear.y;
-        vel_cmd_uav.linear.z = Kp * aim_local_pose.position.z- Kd * d_diff_twist.linear.z;
-	//    + Ki * i_diff_twist.linear.z;
+        }
+        else
+        {
+            // let Kp be bigger when the offset is small
+	  //            if(uav_h<1.5)
+	  //    Kp *= 1.2;   //1 - 2.5 times....
 
-        //el_world_uav.linear.z = 0;
+            vel_cmd_uav.linear.x = Kp * aim_local_pose.position.x - Kd * d_diff_twist.linear.x;
+            //   + Ki*2 * i_diff_twist.linear.x;
+            vel_cmd_uav.linear.y = Kp * aim_local_pose.position.y - Kd * d_diff_twist.linear.y;
+            //   + Ki*2 * i_diff_twist.linear.y;
+            vel_cmd_uav.linear.z = Kp * aim_local_pose.position.z- Kd * d_diff_twist.linear.z;
+            //    + Ki * i_diff_twist.linear.z;
 
-        vel_cmd_uav.linear.x = vel_cmd_uav.linear.x>MAXSPEED?MAXSPEED:vel_cmd_uav.linear.x;
-        vel_cmd_uav.linear.y = vel_cmd_uav.linear.y>MAXSPEED?MAXSPEED:vel_cmd_uav.linear.y;
-        vel_cmd_uav.linear.z = vel_cmd_uav.linear.z>3.0?3.0:vel_cmd_uav.linear.z;
+            //el_world_uav.linear.z = 0;
 
-        vel_cmd_uav.linear.x = vel_cmd_uav.linear.x<-MAXSPEED?-MAXSPEED:vel_cmd_uav.linear.x;
-        vel_cmd_uav.linear.y = vel_cmd_uav.linear.y<-MAXSPEED?-MAXSPEED:vel_cmd_uav.linear.y;
-        vel_cmd_uav.linear.z = vel_cmd_uav.linear.z<-3.0?-3.0:vel_cmd_uav.linear.z;
-	double z_velo; 
-        if(uav_h > 1.3)
-	  z_velo = -0.5;
-	else if(uav_h >0.5)
-	  z_velo = -0.1;
-	else
-	  z_velo= 0;
-	        DJI_M100->velocity_control(0,vel_cmd_uav.linear.x,-vel_cmd_uav.linear.y,z_velo,0);
-        std::cout<<"the velocity is :"<< vel_cmd_uav.linear.x << "," << -vel_cmd_uav.linear.y << ","<<
-                   z_velo << std::endl;
+            vel_cmd_uav.linear.x = vel_cmd_uav.linear.x>MAXSPEED?MAXSPEED:vel_cmd_uav.linear.x;
+            vel_cmd_uav.linear.y = vel_cmd_uav.linear.y>MAXSPEED?MAXSPEED:vel_cmd_uav.linear.y;
+            vel_cmd_uav.linear.z = vel_cmd_uav.linear.z>3.0?3.0:vel_cmd_uav.linear.z;
 
+            vel_cmd_uav.linear.x = vel_cmd_uav.linear.x<-MAXSPEED?-MAXSPEED:vel_cmd_uav.linear.x;
+            vel_cmd_uav.linear.y = vel_cmd_uav.linear.y<-MAXSPEED?-MAXSPEED:vel_cmd_uav.linear.y;
+            vel_cmd_uav.linear.z = vel_cmd_uav.linear.z<-3.0?-3.0:vel_cmd_uav.linear.z;
+            double z_velo;
+            if(uav_h > 1.3)
+                z_velo = -0.5;
+            else if(uav_h >0.5)
+                z_velo = -0.1;
+            else
+                z_velo= 0;
+
+            if(aim_pose.orientation.w == 2)
+            {
+                // now making attemp....
+                if(fabs(aim_local_pose.position.x)<0.1 && fabs(aim_local_pose.position.y)<0.1)
+                {
+                    vel_cmd_uav.linear.x = 0;
+                    vel_cmd_uav.linear.y = 0;
+                    z_velo = - 0.7;
+                }
+		std::cout<<"I am picking..."<<std::endl;
+
+            }
+            else if(aim_pose.orientation.w == 3)
+            {
+                // go back to 3 meters high
+	      //                DJI_M100->local_position_control(aim_pose.position.x,aim_pose.position.y,3,0);
+	      if(uav_h<3.0)
+                DJI_M100->velocity_control(0,0,0,1,0);
+	      else
+		DJI_M100->velocity_control(0,0,0,0,0);
+                // and we should disable velocity control
+                control_counter = 200; //  300 equals to 6 seconds....
+		std::cout<<"I am holding up....."<<std::endl;
+            }
+
+            // set a counter to always minus the frequency should be 50 HZ.....
+            if(control_counter)
+                control_counter--; //minus ultil 0
+            else
+            {
+                DJI_M100->velocity_control(0,vel_cmd_uav.linear.x,-vel_cmd_uav.linear.y,z_velo,0);
+		//                std::cout<<"the velocity is :"<< vel_cmd_uav.linear.x << "," << -vel_cmd_uav.linear.y << ","<<
+		//                           z_velo << std::endl;
+            }
+        }
     }
 
     ~uav_move()
