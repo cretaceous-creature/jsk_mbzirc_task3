@@ -63,6 +63,10 @@ private:
     ros::Publisher param_matrix_pub_;
     ros::Publisher obj_clus_pub_;
     ros::Publisher obj_clus_pub_local_;
+
+    //global
+    ros::Subscriber share_odom_sub_;  //self global position
+    nav_msgs::Odometry global_odom;
     //task3
     ros::Subscriber guidance_sub_;
     ros::Subscriber lidar_sub_;
@@ -79,6 +83,7 @@ private:
     bool debug_show;
     int cluster_thre_dist;
     int downsample_cluster_size, min_cluster_size;
+    double cam_offset = 0.05;
     double fake_dist;
     //param
     std::vector<std::vector<cv::Point> > clusters;
@@ -123,6 +128,7 @@ public:
         obj_clus_pub_local_ = nh_.advertise<geometry_msgs::PoseArray>("/obj_cluster/centroid_pose_local",1);
         filtered_img_pub = nh_.advertise<sensor_msgs::Image>("/filtered_all",1);
         label_img_pub = nh_.advertise<sensor_msgs::Image>("/label_img",1);
+        share_odom_sub_ = nh_.subscribe("/share_odometry",1, &task3_vision::ShareOdomCallback,this);
 
         /*** dynamic reconfigure ***/
         f = boost::bind(&task3_vision::DynamicReconfigureCallback, this, _1,_2);
@@ -136,6 +142,20 @@ public:
         BaseToCamera.setOrigin(tf::Vector3(0,0,0));
         BaseToCamera.setRotation(tf::Quaternion(0.707, -0.707, 0.000, -0.000)); //facing down..
         std::cout<<"initialization finished"<<std::endl;
+
+    }
+
+    void ShareOdomCallback(const nav_msgs::Odometry odom)
+    {
+        global_odom = odom;
+        if(global_odom.pose.pose.orientation.x == 1.0)
+        {
+            cam_offset = 0.05;
+        }
+        else
+        {
+            cam_offset = -0.2;
+        }
 
     }
     void LidarCallback(const std_msgs::Float32 data)
@@ -207,7 +227,8 @@ cv::Mat task3_vision::Projection_matrix(const sensor_msgs::CameraInfoConstPtr& c
         //    rot.setEulerYPR(yaw,0,0);
         //    tfpose.setBasis(rot);
     }
-    BaseToCamera.setOrigin(tf::Vector3(0,0.05,uav_h));
+    uav_h = uav_h-0.2>0?uav_h-0.2:uav_h;
+    BaseToCamera.setOrigin(tf::Vector3(0,cam_offset,uav_h-0.2));
     extrisic = BaseToCamera;//*tfpose.inverse();
     //pinv of projection matrix...
     for(int i = 0; i < 3; i++)

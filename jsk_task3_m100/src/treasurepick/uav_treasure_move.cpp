@@ -3,6 +3,7 @@
  */
 
 // Author: Chen
+ 
 
 #include <ros/ros.h>
 
@@ -185,14 +186,17 @@ public:
         else
         {
             // let Kp be bigger when the offset is small
-	  //            if(uav_h<1.5)
-	  //    Kp *= 1.2;   //1 - 2.5 times....
+            double Kp_t;
+            Kp_t = Kp;
+           if(uav_h<1.2)
+                Kp_t *= 1.5;   //1 - 2.5 times....
 
-            vel_cmd_uav.linear.x = Kp * aim_local_pose.position.x - Kd * d_diff_twist.linear.x;
+
+            vel_cmd_uav.linear.x = Kp_t * aim_local_pose.position.x - Kd * d_diff_twist.linear.x;
             //   + Ki*2 * i_diff_twist.linear.x;
-            vel_cmd_uav.linear.y = Kp * aim_local_pose.position.y - Kd * d_diff_twist.linear.y;
+            vel_cmd_uav.linear.y = Kp_t * aim_local_pose.position.y - Kd * d_diff_twist.linear.y;
             //   + Ki*2 * i_diff_twist.linear.y;
-            vel_cmd_uav.linear.z = Kp * aim_local_pose.position.z- Kd * d_diff_twist.linear.z;
+            vel_cmd_uav.linear.z = Kp_t * aim_local_pose.position.z- Kd * d_diff_twist.linear.z;
             //    + Ki * i_diff_twist.linear.z;
 
             //el_world_uav.linear.z = 0;
@@ -207,7 +211,7 @@ public:
             double z_velo;
             if(uav_h > 1.3)
                 z_velo = -0.5;
-            else if(uav_h >0.5)
+            else if(uav_h >0.7)
                 z_velo = -0.1;
             else
                 z_velo= 0;

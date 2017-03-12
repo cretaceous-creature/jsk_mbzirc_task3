@@ -3,6 +3,7 @@
  */
 
 // Author: Chen
+  
 
 #include <ros/ros.h>
 
@@ -74,6 +75,7 @@ private:
     std::vector<Treasure> treasure_vec;
 
     const double distthreshold = 1; //here we assume that no object is near with 1 meter
+    double holdup_height = 0.35;
 
     enum State_Machine{Picking, Placing, Searching}uav_task_state;
     // drone name
@@ -102,7 +104,7 @@ public:
         guidance_sub_ = nh_.subscribe("/guidance/ultrasonic", 1, &treasure_pick::UltraSonicCallback, this);
         lidar_sub_ = nh_.subscribe<std_msgs::Float32>("/lidar_laser",1,&treasure_pick::LidarCallback,this);
         //
-        share_odom_sub_ = nh_.subscribe("/share_odometry",10,&treasure_pick::ShareOdomCallback,this);
+        share_odom_sub_ = nh_.subscribe("/share_odometry",1,&treasure_pick::ShareOdomCallback,this);
 	//srv
         mag_srv_ = nh_.serviceClient<jsk_mbzirc_board::Magnet>("serial_board/magnet_control");
         mag_srv_status.request.on = false;
@@ -202,8 +204,17 @@ public:
             if(treasure_vec.at(i).visible_times>35)
             {
                 aim_pose = treasure_vec.at(i).pose;
-                //aim_pose_pub_.publish(aim_pose);
-                uav_task_state = Picking;
+                // if the height is less than 3 meters and the global pose is too close to
+                // the origin (dropping area, then no picking...)
+
+                if(uav_task_state = Searching) //from searching to picking....
+                    if(fabs(global_odom.pose.pose.position.x)>6 &&
+                            fabs(global_odom.pose.pose.position.y)>6 &&
+                            fabs(uav_odom.pose.pose.position.z)>2.0)
+                        uav_task_state = Picking;
+                else
+                        uav_task_state = Picking;
+
                 break;
             }
         }
@@ -214,6 +225,15 @@ public:
    void ShareOdomCallback(const nav_msgs::Odometry odom)
    {
        global_odom = odom;
+       if(global_odom.pose.pose.orientation.x == 1.0)
+       {
+           holdup_height = 0.35;
+       }
+       else
+       {
+           holdup_height = 0.5;
+       }
+
    }
     /***********
      * odometry call back
@@ -292,8 +312,8 @@ public:
             //picking
             //consider pick failure approach for ten times....
 
-            if(uav_h < 0.7)  //less than 0.8 meter, do pick attemp...
-                if(uav_h < 0.3)
+            if(uav_h < holdup_height+ 0.4)  //less than 0.8 meter, do pick attemp...
+                if(uav_h < holdup_height)
                 {
                     if(attemp_to_back == 2)
                         attemp_time ++;
