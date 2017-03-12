@@ -156,7 +156,7 @@ void TeleopUAVJoy::JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
     stampsec = joy->header.stamp.sec;
     if(stampsec==0)
       {ROS_INFO("bad joy data");return; }
-    if(stampcounter > 20)
+    if(stampcounter > 200)
       {DJI_M100->velocity_control(0,0,0,0,0);ROS_INFO("joy data lost, wait for recon");}
     //Gripper
     if(joy->buttons[PS3_AXIS_BUTTON_ACTION_CIRCLE]&&joy->buttons[PS3_AXIS_BUTTON_ACTION_TRIANGLE])

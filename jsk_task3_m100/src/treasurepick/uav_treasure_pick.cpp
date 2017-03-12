@@ -227,11 +227,11 @@ public:
        global_odom = odom;
        if(global_odom.pose.pose.orientation.x == 1.0)
        {
-           holdup_height = 0.35;
+           holdup_height = 0.43;
        }
        else
        {
-           holdup_height = 0.5;
+           holdup_height = 0.6;
        }
 
    }
@@ -243,12 +243,12 @@ public:
         double uav_h;
         if(odom.pose.pose.position.z<1.5&&ultra_sonic.ranges.size()&&ultra_sonic.ranges.at(0)>0.05) //less than 1 meter
             uav_h = ultra_sonic.ranges.at(0) - 0.05 ;
-        else if(odom.pose.pose.position.z<1&&lidar_data>0&&lidar_data<2) //less than 1 meter
+        else if(odom.pose.pose.position.z<3&&lidar_data>0&&lidar_data<3) //less than 3 meter
             uav_h = lidar_data;
         else
 	  uav_h = odom.pose.pose.position.z;
 	//test guidance sucks...
-	//	uav_h = odom.pose.pose.position.z;
+       	//uav_h = odom.pose.pose.position.z;
 
         uav_odom = odom; //update
         //publish by status of the state machine
@@ -312,27 +312,27 @@ public:
             //picking
             //consider pick failure approach for ten times....
 
-            if(uav_h < holdup_height+ 0.4)  //less than 0.8 meter, do pick attemp...
+            if(uav_h < holdup_height + 0.4)  //less than 0.8 meter, do pick attemp...
                 if(uav_h < holdup_height)
                 {
                     if(attemp_to_back == 2)
                         attemp_time ++;
                     attemp_to_back = 3;
                     aim_pose.orientation.w = 3; // 3 means going back to 3 mete
-		    std::cout<<"now I am trying to hold back to 3 meters.."<<std::endl;
+                    std::cout<<"now I am trying to hold back to 3 meters.."<<std::endl;
                 }
                 else
                 {
                     attemp_to_back = 2;
                     aim_pose.orientation.w = 2; // 2 means making pick attemp..
-		    std::cout<<"I am tring to pick"<<std::endl;
+                    std::cout<<"I am tring to pick"<<std::endl;
                 }
 
             if(uav_h > 2)
             {
                 canseecounter++;
                 attemp_to_back = 0; // above 2 meters then enable approach
-                if(canseecounter > 1000) //500 means ten seconds
+                if(canseecounter > 700) //500 means ten seconds
                     uav_task_state = Searching;
             }
             else
@@ -340,7 +340,7 @@ public:
                 canseecounter = 0;
             }
 
-            if(attemp_time > 10)
+            if(attemp_time > 7)
             {
 
                attemp_time++;
@@ -387,7 +387,7 @@ public:
     void UltraSonicCallback(const sensor_msgs::LaserScan data)
     {
         if(data.ranges.size())
-            if(data.ranges.at(0)<0.39 || data.ranges.at(0)>0.41)
+            if(data.ranges.at(0)<0.33 || data.ranges.at(0)>0.41)
                 ultra_sonic = data; //update ultra sonic...
     }
 
