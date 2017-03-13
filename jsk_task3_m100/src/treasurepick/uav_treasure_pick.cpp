@@ -165,11 +165,19 @@ public:
 
         uav_task_state = Searching;
 
+//        if(mag_srv_.call(mag_srv_status))
+//            std::cout<<"Gripper Released for 2000 ms"<<std::endl;
+//        else
+//            std::cout<<"Fail to release the gripper"<<std::endl;
 //        DJI_M100->request_sdk_permission_control();
 //        ros::Duration(0.2).sleep();
 
 //        DJI_M100->takeoff();
 //        ros::Duration(0.2).sleep();
+//        if(mag_srv_.call(mag_srv_status))
+//            std::cout<<"Gripper Released for 2000 ms"<<std::endl;
+//        else
+//            std::cout<<"Fail to release the gripper"<<std::endl;
 
     }
     inline bool DistLessThanThre(geometry_msgs::Point P1, geometry_msgs::Point P2, double threshold)
