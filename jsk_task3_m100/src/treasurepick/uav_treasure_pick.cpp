@@ -125,8 +125,10 @@ public:
 
         double landing_x, landing_y;
         n_ = new ros::NodeHandle("~");
-        n_->param("landing_x",  landing_x, 30.0);
-        n_->param("landing_y",  landing_y, 30.0);
+        n_->param("landing_x",  landing_x, -28.0);
+        n_->param("landing_y",  landing_y, 40.0);
+
+        MakeSearchPoints(landing_x, landing_y);
 
         n_->param("drone_number",  drone_num, 1.0);
 
@@ -200,13 +202,13 @@ public:
 
     void MakeSearchPoints(double x_begin, double y_begin)
     {
-        const Eigen::Vector2d dropping_point(0.0, 0.0);
+        const Eigen::Vector2d dropping_point( 20,  30);
         Eigen::Vector2d landing_point(x_begin, y_begin); //[m]
         const Eigen::Vector2d field_size(90.0, 60.0); //[m]
         const double field_margin = 7.0; //[m]
         double yaw = std::atan2(landing_point[1], landing_point[0]);
         Eigen::Matrix2d m_yaw;
-        m_yaw << std::cos(yaw), std::sin(yaw), -std::sin(yaw), std::cos(yaw);
+        m_yaw << std::cos(yaw), -std::sin(yaw), std::sin(yaw), std::cos(yaw);
 
 
         for (int i = 0; i < point_num / 2; i++) {
@@ -344,7 +346,7 @@ public:
        }
        else
        {
-           holdup_height = 0.6;
+           holdup_height = 0.55;
        }
 
    }
@@ -366,9 +368,9 @@ public:
         uav_odom = odom; //update
         //publish by status of the state machine
         //can be set to a fixed frequency..
-        if(uav_task_state==Placing)\
+        if(uav_task_state==Placing)
           {
-            aim_pose_pub_.publish(box_pose);
+            std::cout<<"I am placing"<<std::endl;
             //check if the location is near and then publish mag false
             //and the speed is very low
             if((fabs(global_odom.pose.pose.position.x-box_pose.position.x)<0.3)&&
@@ -388,6 +390,14 @@ public:
                 aim_pose.position.z = 4; // search pose always to be 4 meters
                 aim_pose_pub_.publish(aim_pose);
               }
+            else
+            {
+                box_pose.position.x = -global_odom.pose.pose.position.x;
+                box_pose.position.y = -global_odom.pose.pose.position.y;
+                //TBD // here send every drone to 1.8... but in fact not...
+                box_pose.position.z = 1.8;
+                aim_pose_pub_.publish(box_pose);
+            }
           }
         else if(uav_task_state==Searching)
           {
@@ -397,13 +407,13 @@ public:
             * GPS point 1 - 16....   when it reaches the tempory one, go next..
             *
            */
+	    std::cout << "i am searching"<<std::endl;
             if((fabs(global_odom.pose.pose.position.x-search_pose.position.x)<0.5)&&
                (fabs(global_odom.pose.pose.position.y-search_pose.position.y)<0.5)&&
-               (fabs(global_odom.pose.pose.position.z-search_pose.position.z)<2))
+               (fabs(global_odom.pose.pose.position.z-search_pose.position.z)<1.0))
               {
                // update the searching pose from the recorded gps points.
 
-                //TBD!!!!!!!!!!!!!!!!!!!!
                 if(global_odom.pose.pose.orientation.x == 1.0)
                 {
                         tmp_search_p++;
@@ -454,6 +464,8 @@ public:
             //transfer the global frame to the
             aim_pose.position.x = search_pose.position.x - global_odom.pose.pose.position.x;
             aim_pose.position.y = search_pose.position.y - global_odom.pose.pose.position.y;
+	    //aim_pose.position.x = search_pose.position.x ;
+            //aim_pose.position.y = search_pose.position.y;
             aim_pose.position.z = 4; // search pose always to be 4 meters
             aim_pose_pub_.publish(aim_pose);
           }
@@ -461,8 +473,8 @@ public:
           {
             //picking
             //consider pick failure approach for ten times....
-
-            if(uav_h < holdup_height + 0.4)  //less than 0.8 meter, do pick attemp...
+	    std::cout<< "I am picking"<<std::endl;
+            if(uav_h < holdup_height + 0.5)  //less than 0.8 meter, do pick attemp...
                 if(uav_h < holdup_height)
                 {
                     if(attemp_to_back == 2)
@@ -537,7 +549,7 @@ public:
     void UltraSonicCallback(const sensor_msgs::LaserScan data)
     {
         if(data.ranges.size())
-            if(data.ranges.at(0)<0.33 || data.ranges.at(0)>0.41)
+            if(data.ranges.at(0)<0.37 || data.ranges.at(0)>0.41)
                 ultra_sonic = data; //update ultra sonic...
     }
 

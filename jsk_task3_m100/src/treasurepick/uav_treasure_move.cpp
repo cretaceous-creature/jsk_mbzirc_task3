@@ -72,6 +72,9 @@ private:
     double last_vx = 0;
     double last_vy = 0;
 
+    // the drone's height could be less than 1 meter for only 10 seconds..
+    int holdupcounter = 0;
+
 public:
 
     void DynamicReconfigureCallback(jsk_mbzirc_tasks::ControlparamConfig &config, uint32_t level)
@@ -110,7 +113,7 @@ public:
     void UltraSonicCallback(const sensor_msgs::LaserScan data)
     {
         if(data.ranges.size())
-            if(data.ranges.at(0)<0.33 || data.ranges.at(0)>0.41)
+            if(data.ranges.at(0)<0.37 || data.ranges.at(0)>0.41)
                 ultra_sonic = data; //update ultra sonic...
     }
 
@@ -121,6 +124,7 @@ public:
 
     void AimPoseCallback(const geometry_msgs::Pose aimpose)
     {
+      aim_pose = aimpose;
         for(int i = 0; i < obj_centers_local.poses.size(); i++)
         {
 
@@ -173,7 +177,7 @@ public:
 	//	uav_h = odom->pose.pose.position.z;
 
         uav_odom = *odom;
-        if(aim_pose.orientation.w == 1)
+        if(aim_pose.orientation.w == 1.0)
         {
             // searching status
             std::cout<<"the drone is in searching status.."<<std::endl;
@@ -184,7 +188,7 @@ public:
             vel_cmd_uav.linear.z = aim_pose.position.z - uav_h;
 
             //control in global frame....
-        //   DJI_M100->velocity_control(1,vel_cmd_uav.linear.x,vel_cmd_uav.linear.y,vel_cmd_uav.linear.z,0);
+           DJI_M100->velocity_control(1,vel_cmd_uav.linear.x,vel_cmd_uav.linear.y,vel_cmd_uav.linear.z,0);
             //we can comment this and check...
              std::cout<<"I am searching, and the velocity is: "<< vel_cmd_uav.linear.x <<" , "
                        << vel_cmd_uav.linear.y <<" , " <<
@@ -195,7 +199,7 @@ public:
         {
             // let Kp be bigger when the offset is small
             double Kp_t;
-            Kp_t = Kp*0.8;
+            Kp_t = Kp*1.2;
            //if(uav_h<2.0)
              //   Kp_t *= 1.5;   //1 - 2.5 times....
 
@@ -217,7 +221,7 @@ public:
             vel_cmd_uav.linear.y = vel_cmd_uav.linear.y<-MAXSPEED?-MAXSPEED:vel_cmd_uav.linear.y;
             vel_cmd_uav.linear.z = vel_cmd_uav.linear.z<-3.0?-3.0:vel_cmd_uav.linear.z;
             double z_velo;
-            if(uav_h > 1.4)
+            if(uav_h > 1.2)
                 z_velo = -0.35;
             else if(uav_h >0.8)
                 z_velo = -0.1;
@@ -229,49 +233,56 @@ public:
                 // now making attemp....
                 if(fabs(aim_local_pose.position.x)<0.07 && fabs(aim_local_pose.position.y)<0.07)
                 {
-		  //vel_cmd_uav.linear.x = 0;
+                    //vel_cmd_uav.linear.x = 0;
                     //vel_cmd_uav.linear.y = 0;
                     z_velo = - 1.0;
                 }
-		std::cout<<"I am picking..."<<std::endl;
+                std::cout<<"I am picking..."<<std::endl;
 
             }
             else if(aim_pose.orientation.w == 3)
             {
                 // go back to 3 meters high
-	      //                DJI_M100->local_position_control(aim_pose.position.x,aim_pose.position.y,3,0);
-	      if(uav_h<3.0)
-                DJI_M100->velocity_control(0,0,0,1,0);
-	      else
-              DJI_M100->velocity_control(0,0,0,0,0);
+                //                DJI_M100->local_position_control(aim_pose.position.x,aim_pose.position.y,3,0);
+                if(uav_h<3.0)
+                    DJI_M100->velocity_control(0,0,0,1,0);
+                else
+                    DJI_M100->velocity_control(0,0,0,0,0);
                 // and we should disable velocity control
                 control_counter = 200; //  300 equals to 6 seconds....
                 std::cout<<"I am holding up....."<<std::endl;
             }
+
 
             // set a counter to always minus the frequency should be 50 HZ.....
             if(control_counter)
                 control_counter--; //minus ultil 0
             else
             {
+
                 //check if the velocity remains...which means losted...
                 if(last_vx == vel_cmd_uav.linear.x && last_vy == vel_cmd_uav.linear.y
                         && last_vy!=0 &&last_vx!=0
                         && last_vy <1 && last_vx<1)
                 {
                     lostcounter++;
-                    if(lostcounter > 20)
+                    if(lostcounter > 200) // lost for 4 seconds..
                     {
-                        lostcounter = 0;
+                       std::cout << "i am losting... holding up" << std::endl;
+
                         if(uav_h<3.0)
-                              DJI_M100->velocity_control(0,0,0,1,0);
+                            DJI_M100->velocity_control(0,0,0,1,0);
                         else
+                        {
                             DJI_M100->velocity_control(0,0,0,0,0);
-                        control_counter = 200;
+                            lostcounter = 0;
+                        }
                     }
                 }
-
-                DJI_M100->velocity_control(0,vel_cmd_uav.linear.x,-vel_cmd_uav.linear.y,z_velo,0);
+                else
+                {
+                    DJI_M100->velocity_control(0,vel_cmd_uav.linear.x,-vel_cmd_uav.linear.y,z_velo,0);
+                }
                 last_vx = vel_cmd_uav.linear.x;
                 last_vy = vel_cmd_uav.linear.y;
                 std::cout<<"the velocity is :"<< vel_cmd_uav.linear.x << "," << -vel_cmd_uav.linear.y << ","<<
