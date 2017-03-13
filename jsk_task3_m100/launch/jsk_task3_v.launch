@@ -55,7 +55,10 @@
 
   <group if="$(arg motion)">
        <!-- uav_treasure_pick -->
-    <node pkg="jsk_task3_m100" type="uav_treasure_pick" name="uav_treasure_pick">
+       <node pkg="jsk_task3_m100" type="uav_treasure_pick" name="uav_treasure_pick">
+        landing_x: 30.0
+        landing_y: 30.0
+        drone_number: $(arg drone_number)
     </node>
        <!-- uav_treasure_move -->
     <node pkg="jsk_task3_m100" type="uav_treasure_move" name="uav_treasure_move">

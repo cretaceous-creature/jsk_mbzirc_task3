@@ -32,7 +32,9 @@
 #include <dji_sdk/dji_sdk.h>
 #include <dji_sdk/dji_drone.h>
 #include <Eigen/Core>
+#include <Eigen/Dense>
 #include <tf/transform_broadcaster.h>
+
 typedef struct
 {
     geometry_msgs::Pose pose;
@@ -84,11 +86,22 @@ private:
     double vel_nav_gain_;
     double vel_nav_limit_;
 
+    //searching points
+#define point_num  8  //should be even number
+    Eigen::Vector2d drone1_point[point_num];
+    Eigen::Vector2d drone2_point[point_num];
+    Eigen::Vector2d drone3_point[point_num];
+
     //dirty flag....
     int attemp_to_back = 0;
     int attemp_time = 0;
     int canseecounter = 0;
 
+    int tmp_search_p = 0;
+
+    ros::NodeHandle *n_;
+
+    double drone_num;
 
 public:
     void init()
@@ -110,18 +123,54 @@ public:
         mag_srv_status.request.on = false;
         mag_srv_status.request.time_ms = 2000; //3 second
 
+        double landing_x, landing_y;
+        n_ = new ros::NodeHandle("~");
+        n_->param("landing_x",  landing_x, 30.0);
+        n_->param("landing_y",  landing_y, 30.0);
+
+        n_->param("drone_number",  drone_num, 1.0);
+
+        std::cout<<"drone number is"<<drone_num<<std::endl;
+
         magnet_state.data = 0;
         switch_on_counter = 0;
         //box pose, when picked, go to the box...
         box_pose.position.x = 0;
         box_pose.position.y = 0;
         box_pose.position.z = 1.8;
-        search_pose.position.z = 5; //5 meters high...
+
+        //initial the search_pose
+        if(drone_num == 1.0) //M100
+        {
+            search_pose.position.x = drone2_point[tmp_search_p][0];
+            search_pose.position.y = drone2_point[tmp_search_p][1];
+            search_pose.position.z = 4.5;
+        }
+        else if(drone_num == 2.0)
+        {
+            search_pose.position.x = drone1_point[tmp_search_p][0];
+            search_pose.position.y = drone1_point[tmp_search_p][1];
+            search_pose.position.z = 4.0;
+        }
+        else
+        {
+            search_pose.position.x = drone3_point[tmp_search_p][0];
+            search_pose.position.y = drone3_point[tmp_search_p][1];
+            search_pose.position.z = 4.0;
+        }
+
+
         aim_pose = search_pose;
+
+
         uav_task_state = Searching;
 
-	vel_nav_limit_ = 0.4;
-	vel_nav_gain_ = 1.0;
+//        DJI_M100->request_sdk_permission_control();
+//        ros::Duration(0.2).sleep();
+
+//        DJI_M100->takeoff();
+//        ros::Duration(0.2).sleep();
+
     }
     inline bool DistLessThanThre(geometry_msgs::Point P1, geometry_msgs::Point P2, double threshold)
     {
@@ -131,6 +180,62 @@ public:
             return false;
         else
             return true;
+    }
+
+    inline void SwapPoints(Eigen::Vector2d& p1, Eigen::Vector2d& p2)
+    {
+        Eigen::Vector2d tmp;
+        tmp = p1;
+        p1 = p2;
+        p2 = tmp;
+    }
+
+    void MakeSearchPoints(double x_begin, double y_begin)
+    {
+        const Eigen::Vector2d dropping_point(0.0, 0.0);
+        Eigen::Vector2d landing_point(x_begin, y_begin); //[m]
+        const Eigen::Vector2d field_size(90.0, 60.0); //[m]
+        const double field_margin = 7.0; //[m]
+        double yaw = std::atan2(landing_point[1], landing_point[0]);
+        Eigen::Matrix2d m_yaw;
+        m_yaw << std::cos(yaw), std::sin(yaw), -std::sin(yaw), std::cos(yaw);
+
+
+        for (int i = 0; i < point_num / 2; i++) {
+          Eigen::Vector2d tmp(field_size[0] - dropping_point[0] - field_margin - (field_size[0] - field_margin * 2) / (point_num / 2 - 1) * i, -field_size[1] / 2 + field_margin);
+          drone1_point[i] = m_yaw * tmp;
+        }
+        for (int i = 0; i < point_num / 2; i++) {
+          Eigen::Vector2d tmp(field_size[0] - dropping_point[0] - field_margin - (field_size[0] - field_margin * 2) / (point_num / 2 - 1) * i, -field_size[1] / 2 + field_margin + (field_size[1] - field_margin * 2) / 5);
+          drone1_point[i + point_num / 2] = m_yaw * tmp;
+        }
+        for (int i = 0; i < point_num / 2; i++) {
+          Eigen::Vector2d tmp(field_size[0] - dropping_point[0] - field_margin - (field_size[0] - field_margin * 2) / (point_num / 2 - 1) * i, -field_size[1] / 2 + field_margin + (field_size[1] - field_margin * 2) / 5 * 2);
+          drone2_point[i] = m_yaw * tmp;
+        }
+        for (int i = 0; i < point_num / 2; i++) {
+          Eigen::Vector2d tmp(field_size[0] - dropping_point[0] - field_margin - (field_size[0] - field_margin * 2) / (point_num / 2 - 1) * i, -field_size[1] / 2 + field_margin + (field_size[1] - field_margin * 2) / 5 * 3);
+          drone2_point[i + point_num / 2] = m_yaw * tmp;
+        }
+        for (int i = 0; i < point_num / 2; i++) {
+          Eigen::Vector2d tmp(field_size[0] - dropping_point[0] - field_margin - (field_size[0] - field_margin * 2) / (point_num / 2 - 1) * i, -field_size[1] / 2 + field_margin + (field_size[1] - field_margin * 2) / 5 * 4);
+          drone3_point[i] = m_yaw * tmp;
+        }
+        for (int i = 0; i < point_num / 2; i++) {
+          Eigen::Vector2d tmp(field_size[0] - dropping_point[0] - field_margin - (field_size[0] - field_margin * 2) / (point_num / 2 - 1) * i, -field_size[1] / 2 + field_margin + (field_size[1] - field_margin * 2) / 5 * 5);
+          drone3_point[i + point_num / 2] = m_yaw * tmp;
+        }
+       // std::swap(,)
+
+        for (int i = 0; i < point_num; i++) {
+          std::cout << drone1_point[i][0] << " " << drone1_point[i][1] << std::endl;
+        }
+         for (int i = 0; i < point_num; i++) {
+          std::cout << drone2_point[i][0] << " " << drone2_point[i][1] << std::endl;
+        }
+         for (int i = 0; i < point_num; i++) {
+          std::cout << drone3_point[i][0] << " " << drone3_point[i][1] << std::endl;
+        }
     }
 
     //renew the data of the gazebo objects
@@ -258,21 +363,22 @@ public:
             aim_pose_pub_.publish(box_pose);
             //check if the location is near and then publish mag false
             //and the speed is very low
-            if((fabs(global_odom.pose.pose.position.x-box_pose.position.x)<0.15)&&
-               (fabs(global_odom.pose.pose.position.y-box_pose.position.y)<0.15)&&
-               (fabs(global_odom.pose.pose.position.z-box_pose.position.z)<0.3))
+            if((fabs(global_odom.pose.pose.position.x-box_pose.position.x)<0.3)&&
+               (fabs(global_odom.pose.pose.position.y-box_pose.position.y)<0.3)&&
+               (fabs(global_odom.pose.pose.position.z-box_pose.position.z)<0.5))
               {
                 //here to release the magnets
                 if(mag_srv_.call(mag_srv_status))
-                    ROS_INFO("Gripper Released for 1000 ms");
+                    std::cout<<"Gripper Released for 2000 ms"<<std::endl;
                 else
-                    ROS_INFO("Fail to release the gripper");
+                    std::cout<<"Fail to release the gripper"<<std::endl;
 
-                aim_pose = search_pose;
-                ROS_WARN("left treasure at %f,%f,%f",
-                         uav_odom.pose.pose.position.x,
-                         uav_odom.pose.pose.position.y,
-                         uav_odom.pose.pose.position.z);
+                aim_pose.orientation.w = 1; //this means to control global frame...
+                //transfer the global frame to the
+                aim_pose.position.x = search_pose.position.x - global_odom.pose.pose.position.x;
+                aim_pose.position.y = search_pose.position.y - global_odom.pose.pose.position.y;
+                aim_pose.position.z = 4; // search pose always to be 4 meters
+                aim_pose_pub_.publish(aim_pose);
               }
           }
         else if(uav_task_state==Searching)
@@ -285,11 +391,47 @@ public:
            */
             if((fabs(global_odom.pose.pose.position.x-search_pose.position.x)<0.5)&&
                (fabs(global_odom.pose.pose.position.y-search_pose.position.y)<0.5)&&
-               (fabs(global_odom.pose.pose.position.z-search_pose.position.z)<0.5))
+               (fabs(global_odom.pose.pose.position.z-search_pose.position.z)<2))
               {
                // update the searching pose from the recorded gps points.
 
-                             //TBD!!!!!!!!!!!!!!!!!!!!
+                //TBD!!!!!!!!!!!!!!!!!!!!
+                if(global_odom.pose.pose.orientation.x == 1.0)
+                {
+                        tmp_search_p++;
+                        if(tmp_search_p >= point_num/2 - 1)
+                             tmp_search_p++;
+                            //only for M100 to not go too near to the
+                        if(tmp_search_p >= point_num-1)
+                            tmp_search_p = 0;
+
+                        search_pose.position.x = drone2_point[tmp_search_p][0];
+                        search_pose.position.y = drone2_point[tmp_search_p][1];
+                        search_pose.position.z = 4.5;
+
+                }
+                else if(global_odom.pose.pose.orientation.x == 2.0)
+                {
+                    tmp_search_p++;
+                    if(tmp_search_p >= point_num)
+                        tmp_search_p = 0;
+
+                    search_pose.position.x = drone1_point[tmp_search_p][0];
+                    search_pose.position.y = drone1_point[tmp_search_p][1];
+                    search_pose.position.z = 4;
+                }
+                else
+                {
+                    tmp_search_p++;
+                    if(tmp_search_p >= point_num)
+                        tmp_search_p = 0;
+
+                    search_pose.position.x = drone3_point[tmp_search_p][0];
+                    search_pose.position.y = drone3_point[tmp_search_p][1];
+                    search_pose.position.z = 4;
+                }
+
+
 
                 ROS_WARN("Send random search place at: %f,%f,%f",
                          search_pose.position.x,
@@ -343,16 +485,16 @@ public:
             if(attemp_time > 7)
             {
 
-               attemp_time++;
-               if(attemp_time > 100)  // let it go a little bit far away and try....
-               {
-                   attemp_time = 0;
-                   uav_task_state = Searching;
-		   std::cout<<"back to searching mode"<<std::endl;
-               }
-               aim_pose = search_pose;
+                attemp_time++;
+                if(attemp_time > 100)  // let it go a little bit far away and try....
+                {
+                    attemp_time = 0;
+                    uav_task_state = Searching;
+                    std::cout<<"back to searching mode"<<std::endl;
+                }
+                aim_pose = search_pose;
             }
-	    std::cout<<"the height is " << uav_h <<std::endl;
+            std::cout<<"the height is " << uav_h <<std::endl;
             aim_pose_pub_.publish(aim_pose);
 
 //	    DJI_M100->local_position_control(aim_pose.position.x,aim_pose.position.y,aim_z,0);

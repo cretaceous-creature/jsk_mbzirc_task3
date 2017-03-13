@@ -184,8 +184,11 @@ public:
             vel_cmd_uav.linear.z = aim_pose.position.z - uav_h;
 
             //control in global frame....
-	    //            DJI_M100->velocity_control(1,vel_cmd_uav.linear.x,vel_cmd_uav.linear.y,vel_cmd_uav.linear.z,0);
+        //   DJI_M100->velocity_control(1,vel_cmd_uav.linear.x,vel_cmd_uav.linear.y,vel_cmd_uav.linear.z,0);
             //we can comment this and check...
+             std::cout<<"I am searching, and the velocity is: "<< vel_cmd_uav.linear.x <<" , "
+                       << vel_cmd_uav.linear.y <<" , " <<
+                          vel_cmd_uav.linear.z << std::endl;
 
         }
         else
@@ -243,7 +246,7 @@ public:
               DJI_M100->velocity_control(0,0,0,0,0);
                 // and we should disable velocity control
                 control_counter = 200; //  300 equals to 6 seconds....
-		std::cout<<"I am holding up....."<<std::endl;
+                std::cout<<"I am holding up....."<<std::endl;
             }
 
             // set a counter to always minus the frequency should be 50 HZ.....
