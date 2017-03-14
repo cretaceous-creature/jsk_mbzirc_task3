@@ -12,7 +12,7 @@
   <arg name="origin_latitude" default="24.495753"/>
   <arg name="origin_longitude" default="54.609865"/>
   <!-- drone number -->
-  <arg name="drone_number" default="3.0"/>
+  <arg name="drone_number" default="1.0"/>
   <arg name="image_topic" default="/image_zenmus"/>
   <arg name="cam_info_topic" default="/dji_sdk/camera_info"/>
   <arg name="raw_image" default="/image_zenmus"/>
