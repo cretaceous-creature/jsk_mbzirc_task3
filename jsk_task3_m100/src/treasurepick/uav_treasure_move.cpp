@@ -187,8 +187,8 @@ public:
             vel_cmd_uav.linear.y = aim_pose.position.y / unify;
             vel_cmd_uav.linear.z = aim_pose.position.z - uav_h;
 
-            vel_cmd_uav.linear.z = vel_cmd_uav.linear.z>1.0?1.0:vel_cmd_uav.linear.z;
-            vel_cmd_uav.linear.z = vel_cmd_uav.linear.z<-1.0?-1.0:vel_cmd_uav.linear.z;
+            vel_cmd_uav.linear.z = vel_cmd_uav.linear.z>0.5?0.5:vel_cmd_uav.linear.z;
+            vel_cmd_uav.linear.z = vel_cmd_uav.linear.z<-0.5?-0.5:vel_cmd_uav.linear.z;
 
             //control in global frame....
            DJI_M100->velocity_control(1,vel_cmd_uav.linear.x,vel_cmd_uav.linear.y,vel_cmd_uav.linear.z,0);

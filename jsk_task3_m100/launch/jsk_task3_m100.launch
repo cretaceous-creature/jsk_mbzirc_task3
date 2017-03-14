@@ -6,6 +6,9 @@
   <arg name="teleop" default="true"/>
   <arg name="guidance" default="true"/>
 
+ <!-- V launch -->
+  <include file="$(find jsk_task3_m100)/launch/jsk_task3_v.launch" >
+  </include>
  <!-- DJI SDK -->
   <include file="$(find dji_sdk)/launch/sdk_manifold.launch" >
   </include>

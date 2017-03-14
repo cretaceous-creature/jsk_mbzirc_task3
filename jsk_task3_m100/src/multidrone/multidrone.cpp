@@ -36,8 +36,8 @@ public:
     void init()
     {
         n_ = new ros::NodeHandle("~");
-        n_->param("origin_latitude",  origin_lati, 24.644142);
-        n_->param("origin_longitude",  origin_longi, 54.755947);
+        n_->param("origin_latitude",  origin_lati, 24.4795753);
+        n_->param("origin_longitude",  origin_longi, 54.609865);
        //arena 3
         // n_->param("origin_latitude",  origin_lati, 24.4795753);
         //n_->param("origin_longitude",  origin_longi, 54.609865);
@@ -54,10 +54,10 @@ public:
 
         {
 
-            //double lati = 24.4796285 * PI/180;
-            //double longi = 54.610338* PI/180;
-            double lati = 24.643860 * PI/180;
-            double longi = 54.756338 * PI/180;
+            double lati = 24.4796285 * PI/180;
+            double longi = 54.610338* PI/180;
+            //double lati = 24.643860 * PI/180;
+            //double longi = 54.756338 * PI/180;
             /* From GPS to Ground */
             double dlati = lati-origin_lati;
             double dlongti= longi-origin_longi;

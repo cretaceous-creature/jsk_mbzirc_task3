@@ -47,10 +47,10 @@
         <node pkg="jsk_task3_m100" type="multidrone" name="multidrone">
       <rosparam subst_value="true">
         drone_number: $(arg drone_number)
-        origin_latitude: 24.644142
-        origin_longitude: 54.755947
-    <!--origin_latitude: 24.4795753
-        origin_longitude: 54.609865  arena 3 -->
+    <!--     origin_latitude: 24.644142
+        origin_longitude: 54.755947   rc field-->
+        origin_latitude: 24.4795753
+        origin_longitude: 54.609865
       </rosparam>
     </node>
   </group>
@@ -58,11 +58,13 @@
   <group if="$(arg motion)">
        <!-- uav_treasure_pick -->
        <node pkg="jsk_task3_m100" type="uav_treasure_pick" name="uav_treasure_pick">
-<!--        landing_x: 5.9222
-        landing_y: 47.921  arena 3 -->
-        landing_x: -31.3921
-        landing_y: 39.5614
+      <rosparam subst_value="true">
+        landing_x: 5.9222
+        landing_y: 47.921 
+      <!--  landing_x: -31.3921
+        landing_y: 39.5614  rc field-->
         drone_number: $(arg drone_number)
+      </rosparam>
     </node>
        <!-- uav_treasure_move -->
     <node pkg="jsk_task3_m100" type="uav_treasure_move" name="uav_treasure_move">

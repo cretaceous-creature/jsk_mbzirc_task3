@@ -132,8 +132,8 @@ public:
 
         double landing_x, landing_y;
         n_ = new ros::NodeHandle("~");
-        n_->param("landing_x",  landing_x, -31.3921);
-        n_->param("landing_y",  landing_y, 39.5614);
+        n_->param("landing_x",  landing_x, 5.9222);
+        n_->param("landing_y",  landing_y, 47.921);
 
         MakeSearchPoints(landing_x, landing_y);
 
@@ -146,32 +146,34 @@ public:
         //box pose, when picked, go to the box...
         box_pose.position.x = 0;
         box_pose.position.y = 0;
-        box_pose.position.z = 1.8;
 
         //initial the search_pose
         if(drone_num == 1.0) //M100
         {
             search_pose.position.x = drone2_point[tmp_search_p][0];
             search_pose.position.y = drone2_point[tmp_search_p][1];
-            search_pose.position.z = 4.5;
+            search_pose.position.z = 5;
             F_MODENUM = 8000;
             takeoff_delay = 250; // 5 seconds...
+            box_pose.position.z = 4.5;
         }
         else if(drone_num == 2.0)
         {
             search_pose.position.x = drone1_point[tmp_search_p][0];
             search_pose.position.y = drone1_point[tmp_search_p][1];
             search_pose.position.z = 4.0;
-              F_MODENUM = -10000;
-              takeoff_delay = 500; //10 seconds
+            F_MODENUM = -10000;
+            takeoff_delay = 500; //10 seconds
+            box_pose.position.z = 3;
         }
         else
         {
             search_pose.position.x = drone3_point[tmp_search_p][0];
             search_pose.position.y = drone3_point[tmp_search_p][1];
             search_pose.position.z = 4.0;
-              F_MODENUM = -10000;
-              takeoff_delay = 1000;
+            F_MODENUM = -10000;
+            takeoff_delay = 1000;
+            box_pose.position.z = 1.8;
         }
 
 
@@ -201,7 +203,7 @@ public:
 
     void MakeSearchPoints(double x_begin, double y_begin)
     {
-        const Eigen::Vector2d dropping_point( 20,  30);
+        const Eigen::Vector2d dropping_point( 22,  30);
         Eigen::Vector2d landing_point(x_begin, y_begin); //[m]
         const Eigen::Vector2d field_size(90.0, 60.0); //[m]
         const double field_margin = 7.0; //[m]
@@ -356,8 +358,25 @@ public:
 //                      << rc_channel.throttle <<std::endl;
 
        if(rc_channel.throttle < -9000)
+       {
+           mag_srv_status.request.time_ms = 2000; //2 second
            mag_srv_.call(mag_srv_status);
+       }
 
+       //swtich to A mode and throttle down will disable the gripper
+       if(rc_channel.mode == 0 && rc_channel.throttle < -9000)
+       {
+           mag_srv_status.request.time_ms = 0; //disable
+           mag_srv_.call(mag_srv_status);
+       }
+
+       //if not in F MODE, no counter....
+       // after switch to F mode, the counter runs..
+       if(rc_channel.mode != F_MODENUM)
+       {
+           obtaincontrol_counter = 0;
+           takeoff_counter = 0;
+       }
 
       obtaincontrol_counter++;
       if(rc_channel.mode == F_MODENUM && obtaincontrol_counter > 100) //2 seconds...
@@ -365,6 +384,7 @@ public:
           obtaincontrol_counter = 0;
           DJI_M100->request_sdk_permission_control();
       }
+
 
       takeoff_counter++;
       if(rc_channel.mode==F_MODENUM && takeoff_counter > takeoff_delay) //5, 10, 20 seconds
@@ -398,9 +418,9 @@ public:
             std::cout<<"I am placing"<<std::endl;
             //check if the location is near and then publish mag false
             //and the speed is very low
-            if((fabs(global_odom.pose.pose.position.x-box_pose.position.x)<0.3)&&
-               (fabs(global_odom.pose.pose.position.y-box_pose.position.y)<0.3)&&
-               (fabs(global_odom.pose.pose.position.z-box_pose.position.z)<0.5))
+            if((fabs(global_odom.pose.pose.position.x)<0.3)&&
+               (fabs(global_odom.pose.pose.position.y)<0.3))
+//             &&(fabs(global_odom.pose.pose.position.z-box_pose.position.z)<0.5))
               {
                 //here to release the magnets
                 if(mag_srv_.call(mag_srv_status))
@@ -420,7 +440,7 @@ public:
                 box_pose.position.x = -global_odom.pose.pose.position.x;
                 box_pose.position.y = -global_odom.pose.pose.position.y;
                 //TBD // here send every drone to 1.8... but in fact not...
-                box_pose.position.z = 1.8;
+                box_pose.orientation.w = 1;
                 aim_pose_pub_.publish(box_pose);
             }
           }
