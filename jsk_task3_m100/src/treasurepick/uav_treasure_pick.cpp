@@ -103,8 +103,12 @@ private:
 
     double drone_num;
 
-    int obtaincontrol_counter = 0;
-    int takeoff_counter = 0;
+    unsigned int obtaincontrol_counter = 0;
+    unsigned int takeoff_counter = 0;
+
+    float F_MODENUM;
+    int takeoff_delay;
+
 
 public:
     void init()
@@ -150,18 +154,24 @@ public:
             search_pose.position.x = drone2_point[tmp_search_p][0];
             search_pose.position.y = drone2_point[tmp_search_p][1];
             search_pose.position.z = 4.5;
+            F_MODENUM = 8000;
+            takeoff_delay = 250; // 5 seconds...
         }
         else if(drone_num == 2.0)
         {
             search_pose.position.x = drone1_point[tmp_search_p][0];
             search_pose.position.y = drone1_point[tmp_search_p][1];
             search_pose.position.z = 4.0;
+              F_MODENUM = -10000;
+              takeoff_delay = 500; //10 seconds
         }
         else
         {
             search_pose.position.x = drone3_point[tmp_search_p][0];
             search_pose.position.y = drone3_point[tmp_search_p][1];
             search_pose.position.z = 4.0;
+              F_MODENUM = -10000;
+              takeoff_delay = 1000;
         }
 
 
@@ -169,20 +179,6 @@ public:
 
 
         uav_task_state = Searching;
-
-//        if(mag_srv_.call(mag_srv_status))
-//            std::cout<<"Gripper Released for 2000 ms"<<std::endl;
-//        else
-//            std::cout<<"Fail to release the gripper"<<std::endl;
-//        DJI_M100->request_sdk_permission_control();
-//        ros::Duration(0.2).sleep();
-
-//        DJI_M100->takeoff();
-//        ros::Duration(0.2).sleep();
-//        if(mag_srv_.call(mag_srv_status))
-//            std::cout<<"Gripper Released for 2000 ms"<<std::endl;
-//        else
-//            std::cout<<"Fail to release the gripper"<<std::endl;
 
     }
     inline bool DistLessThanThre(geometry_msgs::Point P1, geometry_msgs::Point P2, double threshold)
@@ -353,16 +349,25 @@ public:
        }
 
        //obtain control and take off counter
+       dji_sdk::RCChannels rc_channel;
+       rc_channel = DJI_M100->rc_channels;
+//                   << rc_channel.mode <<std::endl
+//                      << rc_channel.gear <<std::endl
+//                      << rc_channel.throttle <<std::endl;
+
+       if(rc_channel.throttle < -9000)
+           mag_srv_.call(mag_srv_status);
+
 
       obtaincontrol_counter++;
-      if(obtaincontrol_counter > 500) //10 seconds...
+      if(rc_channel.mode == F_MODENUM && obtaincontrol_counter > 100) //2 seconds...
       {
           obtaincontrol_counter = 0;
           DJI_M100->request_sdk_permission_control();
       }
 
       takeoff_counter++;
-      if(takeoff_counter>600) //12 seconds
+      if(rc_channel.mode==F_MODENUM && takeoff_counter > takeoff_delay) //5, 10, 20 seconds
       {
           takeoff_counter = 0;
           DJI_M100->takeoff();
@@ -374,6 +379,7 @@ public:
      * *********/
     void OdomCallback(const nav_msgs::Odometry odom)
     {
+
         double uav_h;
         if(odom.pose.pose.position.z<1.5&&ultra_sonic.ranges.size()&&ultra_sonic.ranges.at(0)>0.05) //less than 1 meter
             uav_h = ultra_sonic.ranges.at(0) - 0.05 ;
