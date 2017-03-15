@@ -203,10 +203,10 @@ public:
 
     void MakeSearchPoints(double x_begin, double y_begin)
     {
-        const Eigen::Vector2d dropping_point( 22,  30);
+        const Eigen::Vector2d dropping_point( 22,  27.5);
         Eigen::Vector2d landing_point(x_begin, y_begin); //[m]
-        const Eigen::Vector2d field_size(90.0, 60.0); //[m]
-        const double field_margin = 7.0; //[m]
+        const Eigen::Vector2d field_size(90.0, 55.0); //[m]
+        const double field_margin = 8.0; //[m]
         double yaw = std::atan2(landing_point[1], landing_point[0]);
         Eigen::Matrix2d m_yaw;
         m_yaw << std::cos(yaw), -std::sin(yaw), std::sin(yaw), std::cos(yaw);
