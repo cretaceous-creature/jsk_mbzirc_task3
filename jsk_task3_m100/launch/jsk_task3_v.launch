@@ -49,8 +49,8 @@
         drone_number: $(arg drone_number)
     <!--     origin_latitude: 24.644142
         origin_longitude: 54.755947   rc field-->
-        origin_latitude: 24.4795753
-        origin_longitude: 54.609865
+        origin_latitude: 24.479555
+        origin_longitude: 54.60987
       </rosparam>
     </node>
   </group>
@@ -59,8 +59,8 @@
        <!-- uav_treasure_pick -->
        <node pkg="jsk_task3_m100" type="uav_treasure_pick" name="uav_treasure_pick">
       <rosparam subst_value="true">
-        landing_x: 5.9222
-        landing_y: 47.921 
+        landing_x: 5.9
+        landing_y: 48.5 
       <!--  landing_x: -31.3921
         landing_y: 39.5614  rc field-->
         drone_number: $(arg drone_number)

@@ -132,8 +132,8 @@ public:
 
         double landing_x, landing_y;
         n_ = new ros::NodeHandle("~");
-        n_->param("landing_x",  landing_x, 5.9222);
-        n_->param("landing_y",  landing_y, 47.921);
+        n_->param("landing_x",  landing_x, 5.90);
+        n_->param("landing_y",  landing_y, 48.5);
 
         MakeSearchPoints(landing_x, landing_y);
 
@@ -321,16 +321,18 @@ public:
             {
                 aim_pose = treasure_vec.at(i).pose;
                 // if the height is less than 3 meters and the global pose is too close to
-                // the origin (dropping area, then no picking...)
+                // the origin (dropping area, then no picking... also if it is on Placing procedure...)
 
-                if(uav_task_state = Searching) //from searching to picking....
-                    if(fabs(global_odom.pose.pose.position.x)>6 &&
-                            fabs(global_odom.pose.pose.position.y)>6 &&
-                            fabs(uav_odom.pose.pose.position.z)>2.0)
-                        uav_task_state = Picking;
-                else
+                if(uav_task_state == Searching) //from searching to picking....
+                {
+                    if((fabs(global_odom.pose.pose.position.x)>8.0 ||
+                            fabs(global_odom.pose.pose.position.y)>8.0) &&
+                            fabs(uav_odom.pose.pose.position.z)>1.5)
                         uav_task_state = Picking;
 
+                    else
+                        uav_task_state = Searching;
+                }
                 break;
             }
         }
@@ -418,8 +420,8 @@ public:
             std::cout<<"I am placing"<<std::endl;
             //check if the location is near and then publish mag false
             //and the speed is very low
-            if((fabs(global_odom.pose.pose.position.x)<0.3)&&
-               (fabs(global_odom.pose.pose.position.y)<0.3))
+            if((fabs(global_odom.pose.pose.position.x)<0.2)&&
+               (fabs(global_odom.pose.pose.position.y)<0.2))
 //             &&(fabs(global_odom.pose.pose.position.z-box_pose.position.z)<0.5))
               {
                 //here to release the magnets

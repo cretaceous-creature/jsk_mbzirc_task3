@@ -87,9 +87,9 @@ private:
     double fake_dist;
     //param
     std::vector<std::vector<cv::Point> > clusters;
-#define HSVRED -5
-#define HSVGREEN 50 //because our color is more like blue....lol
-#define HSVBLUE 120
+#define HSVRED -10
+#define HSVGREEN 60 //because our color is more like blue....lol
+#define HSVBLUE 130
 #define HSVYELLOW 30
 #define HSVORANGE 20
     //functor
