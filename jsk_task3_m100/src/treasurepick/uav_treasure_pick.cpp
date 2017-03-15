@@ -152,7 +152,7 @@ public:
         {
             search_pose.position.x = drone2_point[tmp_search_p][0];
             search_pose.position.y = drone2_point[tmp_search_p][1];
-            search_pose.position.z = 5;
+            search_pose.position.z = 5.5;
             F_MODENUM = 8000;
             takeoff_delay = 250; // 5 seconds...
             box_pose.position.z = 4.5;
@@ -345,11 +345,11 @@ public:
        global_odom = odom;
        if(global_odom.pose.pose.orientation.x == 1.0)
        {
-           holdup_height = 0.43;
+           holdup_height = 0.40;
        }
        else
        {
-           holdup_height = 0.55;
+           holdup_height = 0.50;
        }
 
        //obtain control and take off counter
@@ -472,7 +472,7 @@ public:
 
                         search_pose.position.x = drone2_point[tmp_search_p][0];
                         search_pose.position.y = drone2_point[tmp_search_p][1];
-                        search_pose.position.z = 4.5;
+                        search_pose.position.z = 5.5;
 
                 }
                 else if(global_odom.pose.pose.orientation.x == 2.0)
@@ -513,7 +513,7 @@ public:
             aim_pose.position.y = search_pose.position.y - global_odom.pose.pose.position.y;
 	    //aim_pose.position.x = search_pose.position.x ;
             //aim_pose.position.y = search_pose.position.y;
-            aim_pose.position.z = 4; // search pose always to be 4 meters
+            aim_pose.position.z = search_pose.position.z; // search pose always to be 4 meters
             aim_pose_pub_.publish(aim_pose);
           }
         else
@@ -541,7 +541,7 @@ public:
             {
                 canseecounter++;
                 attemp_to_back = 0; // above 2 meters then enable approach
-                if(canseecounter > 700) //500 means ten seconds
+                if(canseecounter > 500) //500 means ten seconds
                     uav_task_state = Searching;
             }
             else
@@ -553,13 +553,13 @@ public:
             {
 
                 attemp_time++;
-                if(attemp_time > 100)  // let it go a little bit far away and try....
-                {
-                    attemp_time = 0;
-                    uav_task_state = Searching;
-                    std::cout<<"back to searching mode"<<std::endl;
-                }
-                aim_pose = search_pose;
+                // if(attemp_time > 100)  // let it go a little bit far away and try....
+                // {
+                attemp_time = 0;
+                uav_task_state = Searching;
+                std::cout<<"back to searching mode"<<std::endl;
+                //  }
+               // aim_pose = search_pose;
             }
             std::cout<<"the height is " << uav_h <<std::endl;
             aim_pose_pub_.publish(aim_pose);

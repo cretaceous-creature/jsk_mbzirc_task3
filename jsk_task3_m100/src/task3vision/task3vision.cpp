@@ -150,7 +150,7 @@ public:
         global_odom = odom;
         if(global_odom.pose.pose.orientation.x == 1.0)
         {
-            cam_offset = 0.05;
+            cam_offset = 0.15;
         }
         else
         {

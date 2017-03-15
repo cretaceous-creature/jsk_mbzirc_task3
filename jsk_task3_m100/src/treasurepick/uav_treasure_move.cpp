@@ -187,24 +187,25 @@ public:
             vel_cmd_uav.linear.y = aim_pose.position.y / unify;
             vel_cmd_uav.linear.z = aim_pose.position.z - uav_h;
 
-            vel_cmd_uav.linear.z = vel_cmd_uav.linear.z>0.5?0.5:vel_cmd_uav.linear.z;
-            vel_cmd_uav.linear.z = vel_cmd_uav.linear.z<-0.5?-0.5:vel_cmd_uav.linear.z;
+            vel_cmd_uav.linear.z = vel_cmd_uav.linear.z>0.3?0.3:vel_cmd_uav.linear.z;
+            vel_cmd_uav.linear.z = vel_cmd_uav.linear.z<-0.3?-0.3:vel_cmd_uav.linear.z;
 
             //control in global frame....
-           DJI_M100->velocity_control(1,vel_cmd_uav.linear.x,vel_cmd_uav.linear.y,vel_cmd_uav.linear.z,0);
+            DJI_M100->velocity_control(1,vel_cmd_uav.linear.x,vel_cmd_uav.linear.y,vel_cmd_uav.linear.z,0);
             //we can comment this and check...
-             std::cout<<"I am searching, and the velocity is: "<< vel_cmd_uav.linear.x <<" , "
-                       << vel_cmd_uav.linear.y <<" , " <<
-                          vel_cmd_uav.linear.z << std::endl;
+            std::cout<<"I am searching, and the velocity is: "<< vel_cmd_uav.linear.x <<" , "
+                    << vel_cmd_uav.linear.y <<" , " <<
+                       vel_cmd_uav.linear.z << std::endl;
+            control_counter = 0;
 
         }
         else
         {
             // let Kp be bigger when the offset is small
             double Kp_t;
-            Kp_t = Kp*1.2;
-           //if(uav_h<2.0)
-             //   Kp_t *= 1.5;   //1 - 2.5 times....
+            Kp_t = Kp*0.8;
+            if(uav_h<1.5)
+                Kp_t *= 1.5;   //1 - 2.5 times....
 
 
             vel_cmd_uav.linear.x = Kp_t * aim_local_pose.position.x - Kd * d_diff_twist.linear.x
@@ -234,7 +235,7 @@ public:
             if(aim_pose.orientation.w == 2)
             {
                 // now making attemp....
-                if(fabs(aim_local_pose.position.x)<0.07 && fabs(aim_local_pose.position.y)<0.07)
+                if(fabs(aim_local_pose.position.x)<0.1 && fabs(aim_local_pose.position.y)<0.1)
                 {
                     //vel_cmd_uav.linear.x = 0;
                     //vel_cmd_uav.linear.y = 0;
@@ -248,7 +249,7 @@ public:
                 // go back to 3 meters high
                 //                DJI_M100->local_position_control(aim_pose.position.x,aim_pose.position.y,3,0);
                 if(uav_h<3.0)
-                    DJI_M100->velocity_control(0,0,0,1,0);
+                    DJI_M100->velocity_control(0,0,0,0.5,0);
                 else
                     DJI_M100->velocity_control(0,0,0,0,0);
                 // and we should disable velocity control
@@ -259,7 +260,13 @@ public:
 
             // set a counter to always minus the frequency should be 50 HZ.....
             if(control_counter)
+            {
+                if(uav_h<3.0)
+                    DJI_M100->velocity_control(0,0,0,0.5,0);
+                else
+                    DJI_M100->velocity_control(0,0,0,0,0);
                 control_counter--; //minus ultil 0
+            }
             else
             {
 
