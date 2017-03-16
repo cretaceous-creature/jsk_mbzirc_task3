@@ -345,11 +345,11 @@ public:
        global_odom = odom;
        if(global_odom.pose.pose.orientation.x == 1.0)
        {
-           holdup_height = 0.40;
+           holdup_height = 0.37;
        }
        else
        {
-           holdup_height = 0.50;
+           holdup_height = 0.55;
        }
 
        //obtain control and take off counter
@@ -359,14 +359,14 @@ public:
 //                      << rc_channel.gear <<std::endl
 //                      << rc_channel.throttle <<std::endl;
 
-       if(rc_channel.throttle < -9000)
+       if(rc_channel.mode != 0 &&rc_channel.throttle > 9500)
        {
            mag_srv_status.request.time_ms = 2000; //2 second
            mag_srv_.call(mag_srv_status);
        }
 
        //swtich to A mode and throttle down will disable the gripper
-       if(rc_channel.mode == 0 && rc_channel.throttle < -9000)
+       if(rc_channel.mode == 0 && rc_channel.throttle > 9500)
        {
            mag_srv_status.request.time_ms = 0; //disable
            mag_srv_.call(mag_srv_status);
@@ -403,12 +403,18 @@ public:
     {
 
         double uav_h;
-        if(odom.pose.pose.position.z<1.5&&ultra_sonic.ranges.size()&&ultra_sonic.ranges.at(0)>0.05) //less than 1 meter
-            uav_h = ultra_sonic.ranges.at(0) - 0.05 ;
+        if(odom.pose.pose.position.z< 1.5&&ultra_sonic.ranges.size()&&ultra_sonic.ranges.at(0)>0.05) //less than 1 meter
+            uav_h = ultra_sonic.ranges.at(0);
         else if(odom.pose.pose.position.z<3&&lidar_data>0&&lidar_data<3) //less than 3 meter
             uav_h = lidar_data;
         else
-	  uav_h = odom.pose.pose.position.z;
+        {
+            if(drone_num == 1)
+               uav_h = odom.pose.pose.position.z + 0.1;
+            else
+               uav_h = odom.pose.pose.position.z + 0.18;
+
+        }
 	//test guidance sucks...
        	//uav_h = odom.pose.pose.position.z;
 
@@ -521,7 +527,7 @@ public:
             //picking
             //consider pick failure approach for ten times....
 	    std::cout<< "I am picking"<<std::endl;
-            if(uav_h < holdup_height + 0.5)  //less than 0.8 meter, do pick attemp...
+            if(uav_h < holdup_height + 0.8)  //less than 0.8 meter, do pick attemp...
                 if(uav_h < holdup_height)
                 {
                     if(attemp_to_back == 2)
@@ -542,14 +548,17 @@ public:
                 canseecounter++;
                 attemp_to_back = 0; // above 2 meters then enable approach
                 if(canseecounter > 500) //500 means ten seconds
+                {
                     uav_task_state = Searching;
+                    canseecounter = 0;
+                }
             }
             else
             {
                 canseecounter = 0;
             }
 
-            if(attemp_time > 7)
+            if(attemp_time > 10)
             {
 
                 attemp_time++;

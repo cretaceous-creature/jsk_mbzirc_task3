@@ -71,7 +71,7 @@ private:
     int lostcounter = 0;
     double last_vx = 0;
     double last_vy = 0;
-
+    int drone_num = 0;
     // the drone's height could be less than 1 meter for only 10 seconds..
     int holdupcounter = 0;
 
@@ -112,6 +112,7 @@ public:
     }
     void UltraSonicCallback(const sensor_msgs::LaserScan data)
     {
+        drone_num = 1;
         if(data.ranges.size())
             if(data.ranges.at(0)<0.37 || data.ranges.at(0)>0.41)
                 ultra_sonic = data; //update ultra sonic...
@@ -167,12 +168,18 @@ public:
     void OdomCallback(const nav_msgs::OdometryConstPtr odom)
     {
         double uav_h;
-        if(odom->pose.pose.position.z<1.5&&ultra_sonic.ranges.size()&&ultra_sonic.ranges.at(0)>0.05) //less than 1 meter
-            uav_h = ultra_sonic.ranges.at(0) - 0.05 ;
+        if(odom->pose.pose.position.z<2.0&&ultra_sonic.ranges.size()&&ultra_sonic.ranges.at(0)>0.05) //less than 1 meter
+            uav_h = ultra_sonic.ranges.at(0);
         else if(odom->pose.pose.position.z<3&&lidar_data>0&&lidar_data<3) //less than 3 meters
             uav_h = lidar_data;
         else
-            uav_h = odom->pose.pose.position.z;
+        {
+            if(drone_num == 1)
+               uav_h = odom->pose.pose.position.z + 0.1;
+            else
+               uav_h = odom->pose.pose.position.z + 0.18;
+
+        }
 	//only use gps
 	//	uav_h = odom->pose.pose.position.z;
 
@@ -183,8 +190,8 @@ public:
             std::cout<<"the drone is in searching status.."<<std::endl;
             double unify = sqrt(aim_pose.position.x*aim_pose.position.x +
                                 aim_pose.position.y*aim_pose.position.y);
-            vel_cmd_uav.linear.x = aim_pose.position.x / unify;
-            vel_cmd_uav.linear.y = aim_pose.position.y / unify;
+            vel_cmd_uav.linear.x = 1.3 * (aim_pose.position.x / unify);
+            vel_cmd_uav.linear.y = 1.3 * (aim_pose.position.y / unify);
             vel_cmd_uav.linear.z = aim_pose.position.z - uav_h;
 
             vel_cmd_uav.linear.z = vel_cmd_uav.linear.z>0.3?0.3:vel_cmd_uav.linear.z;
@@ -227,7 +234,7 @@ public:
             double z_velo;
             if(uav_h > 1.2)
                 z_velo = -0.35;
-            else if(uav_h >0.8)
+            else if(uav_h >1.1)
                 z_velo = -0.1;
             else
                 z_velo= 0;
@@ -239,7 +246,7 @@ public:
                 {
                     //vel_cmd_uav.linear.x = 0;
                     //vel_cmd_uav.linear.y = 0;
-                    z_velo = - 1.0;
+                    z_velo = - 0.999;
                 }
                 std::cout<<"I am picking..."<<std::endl;
 
@@ -276,7 +283,7 @@ public:
                         && last_vy <1 && last_vx<1)
                 {
                     lostcounter++;
-                    if(lostcounter > 200) // lost for 4 seconds..
+                    if(lostcounter > 300) // lost for 4 seconds..
                     {
                        std::cout << "i am losting... holding up" << std::endl;
 
